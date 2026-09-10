@@ -4,6 +4,7 @@ import { calculateMasteryRate } from '../services/spacedRepetition';
 import { fetchAllStudentsFromFirestore, saveFirebaseConfig, getSavedFirebaseConfig, initFirebase } from '../services/firebase';
 import { mergeCustomWords } from '../services/storage';
 import { soundSynth } from '../services/soundEffects';
+import { exportWordsToCSV, downloadCSVFile, parseCSVToWords } from '../utils/csvHelper';
 import {
   GraduationCap,
   Users,
@@ -20,7 +21,9 @@ import {
   RotateCcw,
   Sparkles,
   Search,
-  Key
+  Key,
+  FileSpreadsheet,
+  FileCode
 } from 'lucide-react';
 
 interface TeacherDashboardProps {
@@ -132,7 +135,70 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     }
   };
 
-  // JSON / CSV 匯出匯入
+  // CSV / JSON 匯出匯入
+  const handleExportCSV = () => {
+    const csvContent = exportWordsToCSV(words);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    downloadCSVFile(`FlashCard_觀光餐旅單字表_${dateStr}.csv`, csvContent);
+    soundSynth.playCorrect();
+  };
+
+  const handleDownloadCSVTemplate = () => {
+    const sampleWords: WordItem[] = [
+      {
+        id: 'sample_1',
+        levelId: 7,
+        category: '侍酒專業',
+        word: 'Sommelier',
+        phonetic: '[ˌsɒm.əlˈjeɪ]',
+        translation: '侍酒師',
+        partOfSpeech: 'n.',
+        exampleEn: 'The sommelier recommended an excellent wine.',
+        exampleZh: '侍酒師推薦了一款優秀的葡萄酒。',
+        hint: '專業餐廳酒類服務人員',
+      },
+      {
+        id: 'sample_2',
+        levelId: 8,
+        category: '國際會展',
+        word: 'Keynote Speaker',
+        phonetic: '[ˈkiː.noʊt ˈspiː.kɚ]',
+        translation: '專題主講人',
+        partOfSpeech: 'n.',
+        exampleEn: 'The keynote speaker gave an inspiring speech.',
+        exampleZh: '專題主講人發表了一篇鼓舞人心的演講。',
+        hint: '大會開幕開場演講者',
+      }
+    ];
+    const csvContent = exportWordsToCSV(sampleWords);
+    downloadCSVFile('FlashCard_新增關卡範例模板.csv', csvContent);
+    soundSynth.playCorrect();
+  };
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileReader = new FileReader();
+    if (e.target.files && e.target.files[0]) {
+      fileReader.readAsText(e.target.files[0], 'UTF-8');
+      fileReader.onload = (event) => {
+        try {
+          const csvText = event.target?.result as string;
+          const parsedWords = parseCSVToWords(csvText);
+          if (parsedWords.length > 0) {
+            const merged = mergeCustomWords(parsedWords);
+            onSaveWords(merged);
+            soundSynth.playLevelClear();
+            const levelIds = Array.from(new Set(parsedWords.map((w) => w.levelId)));
+            alert(`🎉 成功匯入與無損合併 ${parsedWords.length} 個單字！\n涉及關卡：Unit ${levelIds.join(', Unit ')}\n學生的記憶曲線評定紀錄與星星點數已 100% 完整保留。`);
+          } else {
+            alert('CSV 檔案中未找到有效的單字資料，請檢查格式。');
+          }
+        } catch {
+          alert('CSV 解析失敗，請確認檔案格式為標準 UTF-8 CSV。');
+        }
+      };
+    }
+  };
+
   const handleExportJSON = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(words, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -151,11 +217,11 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         try {
           const parsed = JSON.parse(event.target?.result as string);
           if (Array.isArray(parsed)) {
-            // 無損合併新單字，確保學生的記憶曲線與已完成進度完全不受影響
             const merged = mergeCustomWords(parsed);
             onSaveWords(merged);
             soundSynth.playLevelClear();
-            alert(`成功無損匯入與合併 ${parsed.length} 個單字！學生的記憶曲線評定紀錄已完整保留。`);
+            const levelIds = Array.from(new Set(parsed.map((w) => w.levelId || 1)));
+            alert(`🎉 成功無損匯入與合併 ${parsed.length} 個單字！\n涉及關卡：Unit ${levelIds.join(', Unit ')}\n學生的記憶曲線評定紀錄已完整保留。`);
           }
         } catch {
           alert('JSON 格式不正確！');
@@ -368,15 +434,39 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               </button>
 
               <button
-                onClick={handleExportJSON}
-                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs transition-all flex items-center space-x-1"
+                onClick={handleExportCSV}
+                className="px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-extrabold text-xs transition-all flex items-center space-x-1 shadow-xs"
+                title="匯出符合 Excel 格式的 UTF-8 CSV 單字表"
               >
-                <Download className="w-4 h-4" />
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <span>📊 匯出 CSV 單字表 (Excel)</span>
+              </button>
+
+              <label className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-all flex items-center space-x-1 cursor-pointer shadow-xs">
+                <Upload className="w-4 h-4" />
+                <span>📥 匯入 CSV (自動擴充新關卡)</span>
+                <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
+              </label>
+
+              <button
+                onClick={handleDownloadCSVTemplate}
+                className="px-3 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-extrabold text-xs transition-all flex items-center space-x-1"
+                title="下載新增關卡與單字的 CSV 範例檔"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>下載新關卡 CSV 範本</span>
+              </button>
+
+              <button
+                onClick={handleExportJSON}
+                className="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-all flex items-center space-x-1"
+              >
+                <FileCode className="w-3.5 h-3.5" />
                 <span>匯出 JSON</span>
               </button>
 
-              <label className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs transition-all flex items-center space-x-1 cursor-pointer">
-                <Upload className="w-4 h-4" />
+              <label className="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-all flex items-center space-x-1 cursor-pointer">
+                <Upload className="w-3.5 h-3.5" />
                 <span>匯入 JSON</span>
                 <input type="file" accept=".json" onChange={handleImportJSON} className="hidden" />
               </label>
@@ -387,10 +477,10 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                     onResetWords();
                   }
                 }}
-                className="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold text-xs transition-all flex items-center space-x-1"
+                className="px-3 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold text-xs transition-all flex items-center space-x-1"
               >
-                <RotateCcw className="w-4 h-4" />
-                <span>重置為預設單字庫</span>
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>重置為預設</span>
               </button>
             </div>
           </div>

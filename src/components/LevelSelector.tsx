@@ -39,7 +39,9 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
   onOpenLogin,
   onOpenGuide,
 }) => {
-  const levels = [1, 2, 3, 4, 5, 6];
+  // 動態從單字庫中提取所有關卡 ID (例如 1 ~ 6，甚至新匯入的 7, 8, 9 關卡)
+  const derivedLevelIds = Array.from(new Set(words.map((w) => w.levelId || 1))).sort((a, b) => a - b);
+  const levels = derivedLevelIds.length > 0 ? derivedLevelIds : [1, 2, 3, 4, 5, 6];
 
   // 計算全站整體單字熟練度
   const allWordIds = words.map((w) => w.id);
@@ -173,7 +175,7 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-black text-slate-900 flex items-center space-x-2">
             <Award className="w-6 h-6 text-indigo-600" />
-            <span>單字關卡地圖 (Units 1 - 6)</span>
+            <span>單字關卡地圖 (Units 1 - {Math.max(...levels, 6)})</span>
           </h2>
           <span className="text-xs text-slate-500 font-semibold">點擊關卡卡片開啟多種記憶模式</span>
         </div>
@@ -181,8 +183,12 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {levels.map((levelId) => {
             const isUnlocked = levelId <= userProfile.unlockedLevel;
-            const levelInfo = LEVEL_NAMES[levelId] || { title: `Unit ${levelId}`, desc: '', icon: '⭐' };
             const levelWords = words.filter((w) => w.levelId === levelId);
+            const levelInfo = LEVEL_NAMES[levelId] || {
+              title: `Unit ${levelId}: 自訂擴充關卡`,
+              desc: `包含 ${levelWords.length} 個餐旅專業單字與測驗`,
+              icon: '📚'
+            };
             const levelWordIds = levelWords.map((w) => w.id);
             const mastery = calculateMasteryRate(levelWordIds, userProfile.wordStats);
             const isCompleted = mastery >= 0.8;
