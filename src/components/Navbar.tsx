@@ -15,7 +15,8 @@ import {
   BookOpen,
   Brain,
   RotateCcw,
-  HelpCircle
+  HelpCircle,
+  Trophy
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -114,6 +115,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                     {dueCount}
                   </span>
                 )}
+              </button>
+
+              <button
+                onClick={() => onSelectMode('leaderboard')}
+                className={`relative px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
+                  currentMode === 'leaderboard'
+                    ? `${theme.badge} font-bold shadow-xs`
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Trophy className="w-4 h-4 text-amber-500" />
+                <span>全班排行榜</span>
               </button>
             </div>
           </div>

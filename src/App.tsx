@@ -13,6 +13,7 @@ import { FlashcardMode } from './components/FlashcardMode';
 import { ListeningQuiz } from './components/ListeningQuiz';
 import { MemoryMatchGame } from './components/MemoryMatchGame';
 import { MistakeNotebook } from './components/MistakeNotebook';
+import { Leaderboard } from './components/Leaderboard';
 import { TeacherDashboard } from './components/TeacherDashboard';
 
 import { initAudioUnlock } from './services/tts';
@@ -269,6 +270,14 @@ export function App() {
             onStartReviewSession={handleStartCustomReviewSession}
             onBack={() => setCurrentMode('levels')}
             speechRate={speechRate}
+          />
+        )}
+
+        {currentMode === 'leaderboard' && (
+          <Leaderboard
+            currentProfile={userProfile}
+            words={words}
+            onBack={() => setCurrentMode('levels')}
           />
         )}
 

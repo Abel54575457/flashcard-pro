@@ -16,7 +16,8 @@ import {
   Zap,
   Award,
   UserCheck,
-  BookOpen
+  BookOpen,
+  Trophy
 } from 'lucide-react';
 
 interface LevelSelectorProps {
@@ -74,6 +75,17 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                   <span>📖 遊戲與通關指南</span>
                 </button>
               )}
+
+              <button
+                onClick={() => {
+                  soundSynth.playFlip();
+                  onSelectLevel(1, 'leaderboard');
+                }}
+                className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-indigo-500/80 hover:bg-indigo-500 text-white transition-all text-xs font-black tracking-wider shadow-md active:scale-95 border border-indigo-400/50 backdrop-blur-md"
+              >
+                <Trophy className="w-3.5 h-3.5 text-yellow-300" />
+                <span>🏆 班級排行榜</span>
+              </button>
             </div>
             <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight flex flex-wrap items-center gap-2">
               <span>嗨，您的座號是</span>

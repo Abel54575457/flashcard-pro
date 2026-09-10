@@ -60,6 +60,7 @@ export type StudyMode =
   | 'listening' 
   | 'matching' 
   | 'mistakes' 
+  | 'leaderboard'
   | 'teacher';
 
 export interface QuizQuestion {
