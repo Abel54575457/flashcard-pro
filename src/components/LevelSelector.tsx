@@ -8,16 +8,13 @@ import {
   Star,
   CheckCircle2,
   Brain,
-  Volume2,
-  Grid2X2,
-  Sparkles,
-  Flame,
-  ChevronRight,
-  Zap,
   Award,
   UserCheck,
   BookOpen,
-  Trophy
+  Trophy,
+  Sparkles,
+  Zap,
+  ChevronRight
 } from 'lucide-react';
 
 interface LevelSelectorProps {
@@ -39,31 +36,34 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
   onOpenLogin,
   onOpenGuide,
 }) => {
-  // 動態從單字庫中提取所有關卡 ID (例如 1 ~ 6，甚至新匯入的 7, 8, 9 關卡)
+  // 動態抓取關卡編號 (如 1 ~ 6，甚至新匯入的 7, 8 關卡)
   const derivedLevelIds = Array.from(new Set(words.map((w) => w.levelId || 1))).sort((a, b) => a - b);
   const levels = derivedLevelIds.length > 0 ? derivedLevelIds : [1, 2, 3, 4, 5, 6];
 
-  // 計算全站整體單字熟練度
+  // 全站整體熟練度
   const allWordIds = words.map((w) => w.id);
   const totalMasteryRate = calculateMasteryRate(allWordIds, userProfile.wordStats);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-300">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 animate-in fade-in duration-300">
       
-      {/* Top Banner: General Progress & Ebbinghaus Review Callout */}
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-emerald-600 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 bottom-0 opacity-10 pointer-events-none text-9xl flex items-center pr-8 font-black">
-          ABC
-        </div>
+      {/* Zen Hero Banner */}
+      <div className="zen-card-dark p-6 sm:p-8 text-stone-100 relative overflow-hidden">
+        
+        {/* Subtle Zen Ambient Glow */}
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           
-          <div className="md:col-span-2 space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold tracking-wider uppercase">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>FlashCard Pro - 觀光餐旅專業單字記憶系統</span>
-              </div>
+          {/* Main Greeting & Progress */}
+          <div className="md:col-span-2 space-y-4">
+            
+            {/* Tag & Action Chips */}
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+              <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-white/10 text-stone-300 border border-white/10 backdrop-blur-md">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>觀光餐旅專業單字</span>
+              </span>
 
               {onOpenGuide && (
                 <button
@@ -71,10 +71,10 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                     soundSynth.playFlip();
                     onOpenGuide();
                   }}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-400 text-slate-900 hover:bg-amber-300 transition-all text-xs font-black tracking-wider shadow-md active:scale-95 border border-amber-300"
+                  className="inline-flex items-center space-x-1 px-3 py-1 rounded-full bg-amber-400/90 hover:bg-amber-400 text-stone-950 font-bold transition-all border border-amber-300 shadow-xs active:scale-95"
                 >
                   <BookOpen className="w-3.5 h-3.5" />
-                  <span>📖 遊戲與通關指南</span>
+                  <span>通關指南</span>
                 </button>
               )}
 
@@ -83,71 +83,75 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                   soundSynth.playFlip();
                   onSelectLevel(1, 'leaderboard');
                 }}
-                className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-indigo-500/80 hover:bg-indigo-500 text-white transition-all text-xs font-black tracking-wider shadow-md active:scale-95 border border-indigo-400/50 backdrop-blur-md"
+                className="inline-flex items-center space-x-1 px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-stone-200 transition-all border border-white/10 active:scale-95"
               >
-                <Trophy className="w-3.5 h-3.5 text-yellow-300" />
-                <span>🏆 班級排行榜</span>
+                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                <span>全班排行榜</span>
               </button>
             </div>
-            <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight flex flex-wrap items-center gap-2">
-              <span>嗨，您的座號是</span>
-              <button
-                onClick={() => {
-                  soundSynth.playFlip();
-                  onOpenLogin();
-                }}
-                className="px-3 py-1 rounded-2xl bg-yellow-400 text-slate-900 hover:bg-yellow-300 transition-all font-black inline-flex items-center space-x-1.5 shadow-md active:scale-95 border-2 border-white ring-2 ring-yellow-300"
-                title="點擊切換座號"
-              >
-                <UserCheck className="w-5 h-5 text-slate-900" />
-                <span className="text-xl font-black">{userProfile.seatNumber} 號</span>
-                <span className="text-[11px] bg-slate-900 text-white px-2 py-0.5 rounded-full font-bold">
-                  點此切換座號
-                </span>
-              </button>
-              <span>！準備好溫習觀光單字了嗎？</span>
-            </h1>
-            <p className="text-sm text-indigo-100 max-w-xl">
-              結合艾賓浩斯記憶曲線算法，系統會自動在最適當的時機為你安排複習，幫你記最久！
-            </p>
 
-            {/* Total Mastery Bar */}
-            <div className="pt-2 max-w-md">
-              <div className="flex justify-between text-xs font-extrabold mb-1">
-                <span>整體單字熟練度 (Mastery)</span>
-                <span>{Math.round(totalMasteryRate * 100)}%</span>
+            {/* Title & Seat Info */}
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2 text-stone-300 text-xs sm:text-sm font-medium tracking-wide">
+                <span>座號</span>
+                <button
+                  onClick={() => {
+                    soundSynth.playFlip();
+                    onOpenLogin();
+                  }}
+                  className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-amber-400 text-stone-950 font-bold text-sm shadow-xs hover:bg-amber-300 transition-all border border-amber-200 active:scale-95"
+                  title="點擊切換座號"
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>{userProfile.seatNumber} 號</span>
+                  <span className="text-[10px] opacity-75 underline ml-1">切換</span>
+                </button>
+                <span>‧ 溫習推進中</span>
               </div>
-              <div className="w-full bg-black/20 rounded-full h-3 p-0.5 backdrop-blur-xs overflow-hidden">
+
+              <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-white font-serif leading-snug">
+                靜心學習 ‧ 艾賓浩斯記憶相伴
+              </h1>
+            </div>
+
+            {/* Refined Minimalist Mastery Progress Bar */}
+            <div className="pt-1 max-w-md space-y-1.5">
+              <div className="flex justify-between text-xs font-semibold text-stone-300 tracking-wider">
+                <span>全站單字熟練度 (Mastery)</span>
+                <span className="text-amber-400 font-bold">{Math.round(totalMasteryRate * 100)}%</span>
+              </div>
+              <div className="w-full bg-black/40 rounded-full h-2 overflow-hidden p-0.5 border border-white/10">
                 <div
-                  className="bg-gradient-to-r from-yellow-300 to-emerald-400 h-full rounded-full transition-all duration-500 shadow-sm"
+                  className="bg-gradient-to-r from-amber-500 to-emerald-400 h-full rounded-full transition-all duration-500"
                   style={{ width: `${Math.round(totalMasteryRate * 100)}%` }}
                 />
               </div>
             </div>
+
           </div>
 
-          {/* Ebbinghaus Review Pool Widget */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 space-y-3">
+          {/* Ebbinghaus Review Card */}
+          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-5 border border-white/10 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Brain className="w-5 h-5 text-amber-300" />
-                <span className="font-extrabold text-sm text-white">艾賓浩斯記憶池</span>
+                <Brain className="w-4 h-4 text-amber-400" />
+                <span className="font-bold text-sm text-stone-200">艾賓浩斯記憶池</span>
               </div>
               {dueCount > 0 ? (
-                <span className="px-2 py-0.5 rounded-full text-xs font-black bg-rose-500 text-white animate-bounce">
-                  {dueCount} 個單字待複習
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500 text-white animate-pulse">
+                  {dueCount} 個待複習
                 </span>
               ) : (
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/80 text-white">
-                  目前無到期單字
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  狀態良好
                 </span>
               )}
             </div>
 
-            <p className="text-xs text-indigo-100 leading-relaxed">
+            <p className="text-xs text-stone-300 leading-relaxed font-normal">
               {dueCount > 0
-                ? '依記憶衰退曲線，今天有單字需要即時溫習，快來複習吧！'
-                : '真棒！你目前的單字記憶狀態非常好，繼續挑戰新關卡！'}
+                ? '依記憶衰退曲線，今日有單字需及時溫習。'
+                : '真棒！所有單字皆在良好記憶週期中。'}
             </p>
 
             <button
@@ -156,37 +160,44 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                 onStartDueReview();
               }}
               disabled={dueCount === 0}
-              className={`w-full py-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 transition-all ${
+              className={`w-full py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center space-x-1.5 transition-all ${
                 dueCount > 0
-                  ? 'bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-md active:scale-95'
-                  : 'bg-white/20 text-white/50 cursor-not-allowed'
+                  ? 'bg-amber-400 hover:bg-amber-300 text-stone-950 shadow-md active:scale-95'
+                  : 'bg-white/10 text-stone-500 cursor-not-allowed border border-white/5'
               }`}
             >
               <Zap className="w-4 h-4" />
-              <span>{dueCount > 0 ? '開始艾賓浩斯複習' : '複習池已清空'}</span>
+              <span>{dueCount > 0 ? `靜心複習 (${dueCount}個單字)` : '複習池已清空'}</span>
             </button>
           </div>
 
         </div>
       </div>
 
-      {/* Level Grid */}
+      {/* Level Cards Grid */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-black text-slate-900 flex items-center space-x-2">
-            <Award className="w-6 h-6 text-indigo-600" />
-            <span>單字關卡地圖 (Units 1 - {Math.max(...levels, 6)})</span>
-          </h2>
-          <span className="text-xs text-slate-500 font-semibold">點擊關卡卡片開啟多種記憶模式</span>
+        
+        {/* Section Title */}
+        <div className="flex items-center justify-between border-b border-stone-200/80 pb-3">
+          <div className="flex items-center space-x-2">
+            <Award className="w-5 h-5 text-amber-700" />
+            <h2 className="text-lg sm:text-xl font-bold text-stone-900 tracking-tight">
+              觀光單字關卡地圖 (Units 1 - {Math.max(...levels, 6)})
+            </h2>
+          </div>
+          <span className="text-xs text-stone-600 font-medium hidden sm:inline">
+            點擊關卡開始翻卡記憶或參與測驗
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Level Grid Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {levels.map((levelId) => {
             const isUnlocked = levelId <= userProfile.unlockedLevel;
             const levelWords = words.filter((w) => w.levelId === levelId);
             const levelInfo = LEVEL_NAMES[levelId] || {
               title: `Unit ${levelId}: 自訂擴充關卡`,
-              desc: `包含 ${levelWords.length} 個餐旅專業單字與測驗`,
+              desc: `包含 ${levelWords.length} 個專業單字`,
               icon: '📚'
             };
             const levelWordIds = levelWords.map((w) => w.id);
@@ -196,107 +207,100 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
             return (
               <div
                 key={levelId}
-                className={`group relative rounded-3xl p-6 transition-all duration-300 border ${
+                className={`zen-card p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between space-y-4 ${
                   isUnlocked
-                    ? 'bg-white border-slate-200/90 hover:border-indigo-400 hover:shadow-xl'
-                    : 'bg-slate-100/70 border-slate-200 opacity-75'
+                    ? 'hover:border-stone-400 hover:shadow-md'
+                    : 'opacity-60 bg-stone-100/60'
                 }`}
               >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner transition-transform group-hover:scale-110 ${
-                        isUnlocked
-                          ? 'bg-indigo-50 border border-indigo-100'
-                          : 'bg-slate-200 text-slate-400'
-                      }`}
-                    >
-                      {isUnlocked ? levelInfo.icon : <Lock className="w-6 h-6 text-slate-400" />}
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs font-black uppercase text-indigo-600 tracking-wider">
-                          LEVEL {levelId}
-                        </span>
-                        {isCompleted && (
-                          <span className="inline-flex items-center space-x-0.5 px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            <span>通關</span>
-                          </span>
-                        )}
+                {/* Card Top */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-xs ${
+                          isUnlocked
+                            ? 'bg-stone-100 text-stone-800 border border-stone-200/80'
+                            : 'bg-stone-200 text-stone-400'
+                        }`}
+                      >
+                        {isUnlocked ? levelInfo.icon : <Lock className="w-5 h-5 text-stone-400" />}
                       </div>
-                      <h3 className="font-extrabold text-lg text-slate-900 group-hover:text-indigo-600 transition-colors">
-                        {levelInfo.title}
-                      </h3>
+                      <div>
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-[11px] font-bold text-amber-800 tracking-wider uppercase">
+                            LEVEL {levelId}
+                          </span>
+                          {isCompleted && (
+                            <span className="inline-flex items-center space-x-0.5 px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                              <span>已通關</span>
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="font-bold text-stone-900 text-base leading-snug">
+                          {levelInfo.title}
+                        </h3>
+                      </div>
                     </div>
                   </div>
+
+                  <p className="text-xs text-stone-600 line-clamp-2 leading-relaxed">
+                    {levelInfo.desc}
+                  </p>
                 </div>
 
-                <p className="text-xs text-slate-500 mb-5 min-h-[32px] line-clamp-2">
-                  {levelInfo.desc} ({levelWords.length} 個單字)
-                </p>
-
-                {/* Level Mastery Rate */}
-                <div className="mb-6 space-y-1.5">
-                  <div className="flex justify-between text-xs font-bold text-slate-600">
-                    <span>關卡熟練度</span>
-                    <span>{Math.round(mastery * 100)}%</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        mastery >= 0.8
-                          ? 'bg-emerald-500'
-                          : mastery > 0
-                          ? 'bg-indigo-500'
-                          : 'bg-slate-300'
-                      }`}
-                      style={{ width: `${Math.round(mastery * 100)}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Action Buttons for Modes */}
+                {/* Card Bottom Progress & Actions */}
                 {isUnlocked ? (
-                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100">
-                    <button
-                      onClick={() => {
-                        soundSynth.playFlip();
-                        onSelectLevel(levelId, 'flashcard');
-                      }}
-                      className="px-2 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white text-xs font-bold transition-all flex items-center justify-center space-x-1"
-                    >
-                      <Brain className="w-3.5 h-3.5" />
-                      <span>3D 翻牌字卡</span>
-                    </button>
+                  <div className="space-y-3 pt-2 border-t border-stone-100">
+                    <div className="flex items-center justify-between text-xs text-stone-600 font-medium">
+                      <span>包含 {levelWords.length} 單字</span>
+                      <span className="font-bold text-stone-900">熟練度 {Math.round(mastery * 100)}%</span>
+                    </div>
 
-                    <button
-                      onClick={() => {
-                        soundSynth.playFlip();
-                        onSelectLevel(levelId, 'listening');
-                      }}
-                      className="px-2 py-2 rounded-xl bg-amber-50 hover:bg-amber-500 text-amber-800 hover:text-white text-xs font-bold transition-all flex items-center justify-center space-x-1"
-                    >
-                      <Volume2 className="w-3.5 h-3.5" />
-                      <span>聽力測驗</span>
-                    </button>
+                    <div className="w-full bg-stone-100 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className="bg-emerald-600 h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.round(mastery * 100)}%` }}
+                      />
+                    </div>
 
-                    <button
-                      onClick={() => {
-                        soundSynth.playFlip();
-                        onSelectLevel(levelId, 'matching');
-                      }}
-                      className="px-2 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white text-xs font-bold transition-all flex items-center justify-center space-x-1"
-                    >
-                      <Grid2X2 className="w-3.5 h-3.5" />
-                      <span>單字連連看</span>
-                    </button>
+                    {/* Mode Buttons */}
+                    <div className="grid grid-cols-3 gap-1.5 pt-1 text-xs font-bold">
+                      <button
+                        onClick={() => {
+                          soundSynth.playFlip();
+                          onSelectLevel(levelId, 'flashcard');
+                        }}
+                        className="py-2 rounded-xl bg-stone-900 text-stone-100 hover:bg-stone-800 transition-all flex items-center justify-center space-x-1 shadow-xs active:scale-95"
+                      >
+                        <span>🎴 閃卡</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          soundSynth.playFlip();
+                          onSelectLevel(levelId, 'listening');
+                        }}
+                        className="py-2 rounded-xl bg-amber-100 text-amber-900 hover:bg-amber-200 transition-all flex items-center justify-center space-x-1 border border-amber-200 active:scale-95"
+                      >
+                        <span>🎧 聽力</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          soundSynth.playFlip();
+                          onSelectLevel(levelId, 'matching');
+                        }}
+                        className="py-2 rounded-xl bg-emerald-100 text-emerald-900 hover:bg-emerald-200 transition-all flex items-center justify-center space-x-1 border border-emerald-200 active:scale-95"
+                      >
+                        <span>🧩 配對</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="py-3 bg-slate-200/50 rounded-2xl text-center text-xs font-bold text-slate-500 flex items-center justify-center space-x-1.5">
-                    <Lock className="w-4 h-4 text-slate-400" />
-                    <span>完成上一關解鎖</span>
+                  <div className="pt-2 border-t border-stone-100 text-center py-2 text-xs font-semibold text-stone-600">
+                    🔒 請先通過上一關卡解鎖
                   </div>
                 )}
 
