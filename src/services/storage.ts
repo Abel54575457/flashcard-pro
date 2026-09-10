@@ -3,7 +3,10 @@ import { INITIAL_WORDS } from '../data/grade2Words';
 import { syncUserToFirestore, fetchUserFromFirestore } from './firebase';
 
 const USER_PROFILE_KEY = 'flashcard_pro_user_profile';
+const LAST_SEAT_KEY = 'flashcard_pro_last_seat';
 const CUSTOM_WORDS_KEY = 'flashcard_pro_custom_words';
+
+const getSeatKey = (seat: string) => `flashcard_pro_user_profile_${seat}`;
 
 export function createDefaultProfile(seatNumber: string = '01', classCode: string = '201'): UserProfile {
   return {
@@ -21,8 +24,38 @@ export function createDefaultProfile(seatNumber: string = '01', classCode: strin
   };
 }
 
+export function getLocalProfileForSeat(seatNumber: string): UserProfile | null {
+  if (typeof window === 'undefined') return null;
+  const seatKey = getSeatKey(seatNumber);
+  const rawSeat = localStorage.getItem(seatKey);
+  if (rawSeat) {
+    try {
+      return JSON.parse(rawSeat);
+    } catch {
+      // ignore
+    }
+  }
+  const rawGlobal = localStorage.getItem(USER_PROFILE_KEY);
+  if (rawGlobal) {
+    try {
+      const parsed = JSON.parse(rawGlobal);
+      if (parsed && parsed.seatNumber === seatNumber) {
+        return parsed;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
+
 export function getLocalProfile(): UserProfile | null {
   if (typeof window === 'undefined') return null;
+  const lastSeat = localStorage.getItem(LAST_SEAT_KEY);
+  if (lastSeat) {
+    const profile = getLocalProfileForSeat(lastSeat);
+    if (profile) return profile;
+  }
   const raw = localStorage.getItem(USER_PROFILE_KEY);
   if (!raw) return null;
   try {
@@ -34,33 +67,37 @@ export function getLocalProfile(): UserProfile | null {
 
 export function saveLocalProfile(profile: UserProfile): void {
   if (typeof window === 'undefined') return;
+  const seatKey = getSeatKey(profile.seatNumber);
+  localStorage.setItem(seatKey, JSON.stringify(profile));
   localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
-  // 同步給 Firestore (若有設定 Firebase)
+  localStorage.setItem(LAST_SEAT_KEY, profile.seatNumber);
+  // 同步給 Firestore (若有設定 Firebase)，背景處理不阻塞 UI
   syncUserToFirestore(profile).catch((err) => console.log('Firestore sync notice:', err));
 }
 
-export async function loadUserProfile(seatNumber: string): Promise<UserProfile> {
-  // 先嘗試從 LocalStorage 讀取
-  const local = getLocalProfile();
-  if (local && local.seatNumber === seatNumber) {
-    // 檢查連續登入 Streak
+export function loadUserProfileSync(seatNumber: string): UserProfile {
+  const local = getLocalProfileForSeat(seatNumber);
+  if (local) {
     const updated = updateStreakDays(local);
     saveLocalProfile(updated);
     return updated;
   }
-
-  // 若 LocalStorage 沒有，嘗試從 Firestore 抓取
-  const remote = await fetchUserFromFirestore(seatNumber);
-  if (remote) {
-    const updated = updateStreakDays(remote);
-    saveLocalProfile(updated);
-    return updated;
-  }
-
-  // 若都沒有，建立全新帳號檔
   const newProfile = createDefaultProfile(seatNumber);
   saveLocalProfile(newProfile);
   return newProfile;
+}
+
+export async function loadUserProfile(seatNumber: string): Promise<UserProfile> {
+  const profile = loadUserProfileSync(seatNumber);
+  fetchUserFromFirestore(seatNumber)
+    .then((remote) => {
+      if (remote) {
+        const updated = updateStreakDays(remote);
+        saveLocalProfile(updated);
+      }
+    })
+    .catch(() => {});
+  return profile;
 }
 
 function updateStreakDays(profile: UserProfile): UserProfile {

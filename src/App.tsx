@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, WordItem, StudyMode, ThemeColor, WordStat } from './types';
-import { loadUserProfile, saveLocalProfile, getLocalProfile, getCustomWords, saveCustomWords, resetCustomWordsToDefault } from './services/storage';
+import { loadUserProfile, loadUserProfileSync, saveLocalProfile, getLocalProfile, getCustomWords, saveCustomWords, resetCustomWordsToDefault } from './services/storage';
 import { isWordDueForReview, updateWordStatOnResult, calculateMasteryRate } from './services/spacedRepetition';
-import { initFirebase } from './services/firebase';
+import { initFirebase, fetchUserFromFirestore } from './services/firebase';
 import { soundSynth } from './services/soundEffects';
 
 import { Navbar } from './components/Navbar';
@@ -43,9 +43,16 @@ export function App() {
     // 載入上次紀錄之座號檔案 (預設為 01)
     const local = getLocalProfile();
     const initialSeat = local?.seatNumber || '01';
-    loadUserProfile(initialSeat).then((profile) => {
-      setUserProfile(profile);
-    });
+    const initialProfile = loadUserProfileSync(initialSeat);
+    setUserProfile(initialProfile);
+
+    // 背景同步遠端 Firebase，不阻塞畫面渲染
+    fetchUserFromFirestore(initialSeat).then((remote) => {
+      if (remote) {
+        setUserProfile((curr) => (curr?.seatNumber === initialSeat ? remote : curr));
+        saveLocalProfile(remote);
+      }
+    }).catch(() => {});
   }, []);
 
   if (!userProfile) {
@@ -62,18 +69,33 @@ export function App() {
   // 待複習單字計數
   const dueCount = words.filter((w) => isWordDueForReview(userProfile.wordStats[w.id])).length;
 
-  // 學生切換座號登入
+  // 學生切換座號登入 (零延遲同步更新)
   const handleStudentLogin = (seatNumber: string, classCode: string, themeColor: ThemeColor) => {
-    loadUserProfile(seatNumber).then((profile) => {
-      const updated = {
-        ...profile,
-        seatNumber,
-        classCode,
-        themeColor,
-      };
-      setUserProfile(updated);
-      saveLocalProfile(updated);
-    });
+    const existing = loadUserProfileSync(seatNumber);
+    const updated: UserProfile = {
+      ...existing,
+      seatNumber,
+      classCode,
+      themeColor,
+    };
+    // 1. 立即同步更新 React 狀態與 LocalStorage (0ms 延遲)
+    setUserProfile(updated);
+    saveLocalProfile(updated);
+
+    // 2. 背景同步 Firebase 雲端資料 (不卡住 UI)
+    fetchUserFromFirestore(seatNumber).then((remote) => {
+      if (remote) {
+        setUserProfile((curr) => {
+          if (curr && curr.seatNumber === seatNumber) {
+            return {
+              ...remote,
+              themeColor,
+            };
+          }
+          return curr;
+        });
+      }
+    }).catch(() => {});
   };
 
   // 切換主題顏色

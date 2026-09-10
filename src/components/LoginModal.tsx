@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile, ThemeColor } from '../types';
 import { soundSynth } from '../services/soundEffects';
 import { User, ShieldCheck, Check, Sparkles, X, Palette, Cloud, Database } from 'lucide-react';
@@ -22,6 +22,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 }) => {
   const [seat, setSeat] = useState(currentProfile.seatNumber || '01');
   const [color, setColor] = useState<ThemeColor>(currentProfile.themeColor || 'emerald');
+
+  useEffect(() => {
+    if (isOpen && currentProfile) {
+      setSeat(currentProfile.seatNumber || '01');
+      setColor(currentProfile.themeColor || 'emerald');
+    }
+  }, [isOpen, currentProfile]);
 
   if (!isOpen) return null;
 
