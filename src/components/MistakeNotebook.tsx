@@ -98,13 +98,13 @@ export const MistakeNotebook: React.FC<MistakeNotebookProps> = ({
       {/* Action Header Banner */}
       <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-black text-slate-900">
-            {activeTab === 'due' ? '記憶衰退溫習提醒' : '強化弱點集中訓練'}
+          <h2 className="text-base font-bold text-stone-900">
+            {activeTab === 'due' ? '待複習單字' : '歷史錯題本'}
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-stone-500 mt-0.5">
             {activeTab === 'due'
-              ? '共有 ' + dueWords.length + ' 個單字依據記憶衰退時間建議今日溫習。'
-              : '共有 ' + mistakeWords.length + ' 個單字曾有答錯記錄。'}
+              ? `共 ${dueWords.length} 個單字待溫習`
+              : `共 ${mistakeWords.length} 個錯題單字`}
           </p>
         </div>
 

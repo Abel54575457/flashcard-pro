@@ -47,80 +47,45 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 animate-in fade-in duration-300">
       
-      {/* Zen Hero Banner */}
+      {/* Minimalist Zen Hero Banner */}
       <div className="zen-card-dark p-6 sm:p-8 text-stone-100 relative overflow-hidden">
         
-        {/* Subtle Zen Ambient Glow */}
+        {/* Subtle Ambient Glow */}
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           
           {/* Main Greeting & Progress */}
-          <div className="md:col-span-2 space-y-4">
+          <div className="md:col-span-2 space-y-3">
             
-            {/* Tag & Action Chips */}
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-              <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-white/10 text-stone-300 border border-white/10 backdrop-blur-md">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>觀光餐旅專業單字</span>
-              </span>
-
-              {onOpenGuide && (
-                <button
-                  onClick={() => {
-                    soundSynth.playFlip();
-                    onOpenGuide();
-                  }}
-                  className="inline-flex items-center space-x-1 px-3 py-1 rounded-full bg-amber-400/90 hover:bg-amber-400 text-stone-950 font-bold transition-all border border-amber-300 shadow-xs active:scale-95"
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  <span>通關指南</span>
-                </button>
-              )}
-
+            {/* Class & Seat Header */}
+            <div className="flex items-center space-x-2 text-stone-400 text-xs font-semibold tracking-wider uppercase">
+              <span>觀光餐旅 205 班</span>
+              <span>‧</span>
               <button
                 onClick={() => {
                   soundSynth.playFlip();
-                  onSelectLevel(1, 'leaderboard');
+                  onOpenLogin();
                 }}
-                className="inline-flex items-center space-x-1 px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-stone-200 transition-all border border-white/10 active:scale-95"
+                className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-amber-400/20 text-amber-300 hover:bg-amber-400/30 transition-all font-bold"
+                title="點擊切換座號"
               >
-                <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                <span>全班排行榜</span>
+                <span>座號 {userProfile.seatNumber}</span>
+                <span className="text-[10px] opacity-75">切換</span>
               </button>
             </div>
 
-            {/* Title & Seat Info */}
-            <div className="space-y-1">
-              <div className="flex items-center space-x-2 text-stone-300 text-xs sm:text-sm font-medium tracking-wide">
-                <span>座號</span>
-                <button
-                  onClick={() => {
-                    soundSynth.playFlip();
-                    onOpenLogin();
-                  }}
-                  className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-amber-400 text-stone-950 font-bold text-sm shadow-xs hover:bg-amber-300 transition-all border border-amber-200 active:scale-95"
-                  title="點擊切換座號"
-                >
-                  <UserCheck className="w-3.5 h-3.5" />
-                  <span>{userProfile.seatNumber} 號</span>
-                  <span className="text-[10px] opacity-75 underline ml-1">切換</span>
-                </button>
-                <span>‧ 溫習推進中</span>
-              </div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-serif">
+              單字學習地圖
+            </h1>
 
-              <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-white font-serif leading-snug">
-                觀光餐旅專業單字自主學習
-              </h1>
-            </div>
-
-            {/* Refined Minimalist Mastery Progress Bar */}
-            <div className="pt-1 max-w-md space-y-1.5">
-              <div className="flex justify-between text-xs font-semibold text-stone-300 tracking-wider">
-                <span>全站單字熟練度 (Mastery)</span>
+            {/* Mastery Progress Bar */}
+            <div className="pt-1 max-w-md space-y-1">
+              <div className="flex justify-between text-xs font-medium text-stone-300">
+                <span>全站熟練度</span>
                 <span className="text-amber-400 font-bold">{Math.round(totalMasteryRate * 100)}%</span>
               </div>
-              <div className="w-full bg-black/40 rounded-full h-2 overflow-hidden p-0.5 border border-white/10">
+              <div className="w-full bg-black/40 rounded-full h-1.5 overflow-hidden border border-white/10">
                 <div
                   className="bg-gradient-to-r from-amber-500 to-emerald-400 h-full rounded-full transition-all duration-500"
                   style={{ width: `${Math.round(totalMasteryRate * 100)}%` }}
@@ -131,28 +96,19 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
           </div>
 
           {/* Review Card */}
-          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-5 border border-white/10 space-y-3">
+          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Brain className="w-4 h-4 text-amber-400" />
-                <span className="font-bold text-sm text-stone-200">待複習單字池</span>
-              </div>
+              <span className="font-bold text-xs text-stone-200">待複習單字</span>
               {dueCount > 0 ? (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500 text-white animate-pulse">
-                  {dueCount} 個待複習
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-400 text-stone-950">
+                  {dueCount} 個
                 </span>
               ) : (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  狀態良好
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/20 text-emerald-300">
+                  已完成
                 </span>
               )}
             </div>
-
-            <p className="text-xs text-stone-300 leading-relaxed font-normal">
-              {dueCount > 0
-                ? '依記憶衰退曲線，今日有單字需及時溫習。'
-                : '真棒！所有單字皆在良好記憶週期中。'}
-            </p>
 
             <button
               onClick={() => {
@@ -160,14 +116,14 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                 onStartDueReview();
               }}
               disabled={dueCount === 0}
-              className={`w-full py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center space-x-1.5 transition-all ${
+              className={`w-full py-2 rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 transition-all ${
                 dueCount > 0
-                  ? 'bg-amber-400 hover:bg-amber-300 text-stone-950 shadow-md active:scale-95'
+                  ? 'bg-amber-400 hover:bg-amber-300 text-stone-950 shadow-xs active:scale-95'
                   : 'bg-white/10 text-stone-500 cursor-not-allowed border border-white/5'
               }`}
             >
-              <Zap className="w-4 h-4" />
-              <span>{dueCount > 0 ? `開始複習 (${dueCount}個單字)` : '複習池已清空'}</span>
+              <Zap className="w-3.5 h-3.5" />
+              <span>{dueCount > 0 ? `開始複習 (${dueCount})` : '無需複習'}</span>
             </button>
           </div>
 
@@ -178,16 +134,13 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
       <div className="space-y-4">
         
         {/* Section Title */}
-        <div className="flex items-center justify-between border-b border-stone-200/80 pb-3">
+        <div className="flex items-center justify-between border-b border-stone-200/80 pb-2.5">
           <div className="flex items-center space-x-2">
-            <Award className="w-5 h-5 text-amber-700" />
-            <h2 className="text-lg sm:text-xl font-bold text-stone-900 tracking-tight">
-              觀光單字關卡地圖 (Units 1 - {Math.max(...levels, 6)})
+            <Award className="w-4 h-4 text-amber-700" />
+            <h2 className="text-base sm:text-lg font-bold text-stone-900 tracking-tight">
+              關卡地圖 (Unit 1 - {Math.max(...levels, 6)})
             </h2>
           </div>
-          <span className="text-xs text-stone-600 font-medium hidden sm:inline">
-            點擊關卡開始翻卡記憶或參與測驗
-          </span>
         </div>
 
         {/* Level Grid Cards */}

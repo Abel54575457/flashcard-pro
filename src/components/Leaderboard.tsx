@@ -187,25 +187,20 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
       </div>
 
       {/* Leaderboard Banner */}
-      <div className="bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 bottom-0 opacity-10 pointer-events-none text-9xl flex items-center pr-8 font-black">
-          🏆
-        </div>
-
-        <div className="relative z-10 space-y-4">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold uppercase tracking-wider">
-            <Trophy className="w-3.5 h-3.5 text-yellow-300" />
-            <span>觀光餐旅 205 班 - 學習英雄榜</span>
+      <div className="zen-card-dark p-6 sm:p-8 text-white relative overflow-hidden">
+        <div className="relative z-10 space-y-2">
+          <div className="flex items-center space-x-2 text-stone-400 text-xs font-semibold uppercase tracking-wider">
+            <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            <span>205 班 ‧ 學習排行榜</span>
           </div>
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-4xl font-black tracking-tight flex items-center space-x-2">
-                <span>全班學習榮譽排行榜</span>
-                <Sparkles className="w-6 h-6 text-yellow-300 animate-pulse" />
+              <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-white font-serif">
+                全班學習排行榜
               </h1>
-              <p className="text-xs sm:text-sm text-amber-100 mt-1 max-w-lg">
-                即時查閱全班 35 位同學的單字記憶進度、獲得星星數與連續學習成就！
+              <p className="text-xs text-stone-300 mt-1">
+                即時查閱全班 35 位同學的單字進度與星星數
               </p>
             </div>
 

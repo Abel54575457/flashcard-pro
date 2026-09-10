@@ -64,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   FlashCard <span className="text-amber-700 font-semibold">Pro</span>
                 </span>
                 <span className="text-[10px] text-stone-600 font-medium block leading-none">
-                  觀光餐旅專業單字
+                  205 班
                 </span>
               </div>
             </button>
@@ -80,7 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <Home className="w-3.5 h-3.5" />
-                <span>關卡地圖</span>
+                <span>關卡</span>
               </button>
 
               <button
@@ -92,7 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <Brain className="w-3.5 h-3.5 text-amber-600" />
-                <span>複習與錯題</span>
+                <span>錯題本</span>
                 {dueCount > 0 && (
                   <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-rose-600 text-white font-bold">
                     {dueCount}
@@ -109,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <Trophy className="w-3.5 h-3.5 text-amber-600" />
-                <span>全班排行榜</span>
+                <span>排行榜</span>
               </button>
             </nav>
           </div>
