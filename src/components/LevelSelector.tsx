@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Zap,
   Award,
-  UserCheck
+  UserCheck,
+  BookOpen
 } from 'lucide-react';
 
 interface LevelSelectorProps {
@@ -25,6 +26,7 @@ interface LevelSelectorProps {
   dueCount: number;
   onStartDueReview: () => void;
   onOpenLogin: () => void;
+  onOpenGuide?: () => void;
 }
 
 export const LevelSelector: React.FC<LevelSelectorProps> = ({
@@ -34,6 +36,7 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
   dueCount,
   onStartDueReview,
   onOpenLogin,
+  onOpenGuide,
 }) => {
   const levels = [1, 2, 3, 4, 5, 6];
 
@@ -53,9 +56,24 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           
           <div className="md:col-span-2 space-y-3">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold tracking-wider uppercase">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>FlashCard Pro - 觀光餐旅專業單字記憶系統</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold tracking-wider uppercase">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>FlashCard Pro - 觀光餐旅專業單字記憶系統</span>
+              </div>
+
+              {onOpenGuide && (
+                <button
+                  onClick={() => {
+                    soundSynth.playFlip();
+                    onOpenGuide();
+                  }}
+                  className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-400 text-slate-900 hover:bg-amber-300 transition-all text-xs font-black tracking-wider shadow-md active:scale-95 border border-amber-300"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>📖 遊戲與通關指南</span>
+                </button>
+              )}
             </div>
             <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight flex flex-wrap items-center gap-2">
               <span>嗨，您的座號是</span>

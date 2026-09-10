@@ -7,6 +7,7 @@ import { soundSynth } from './services/soundEffects';
 
 import { Navbar } from './components/Navbar';
 import { LoginModal } from './components/LoginModal';
+import { GuideModal } from './components/GuideModal';
 import { LevelSelector } from './components/LevelSelector';
 import { FlashcardMode } from './components/FlashcardMode';
 import { ListeningQuiz } from './components/ListeningQuiz';
@@ -25,6 +26,7 @@ export function App() {
   const [speechRate, setSpeechRate] = useState<number>(1.0);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [isLoginOpen, setIsLoginOpen] = useState<boolean>(false);
+  const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [isFirebaseActive, setIsFirebaseActive] = useState<boolean>(false);
 
   // 初始化載入
@@ -202,6 +204,7 @@ export function App() {
         currentMode={currentMode}
         onSelectMode={(mode) => setCurrentMode(mode)}
         onOpenLogin={() => setIsLoginOpen(true)}
+        onOpenGuide={() => setIsGuideOpen(true)}
         onUpdateTheme={handleUpdateTheme}
         speechRate={speechRate}
         onToggleSpeechRate={() => setSpeechRate((r) => (r === 1.0 ? 0.7 : 1.0))}
@@ -224,6 +227,7 @@ export function App() {
             dueCount={dueCount}
             onStartDueReview={handleStartDueReview}
             onOpenLogin={() => setIsLoginOpen(true)}
+            onOpenGuide={() => setIsGuideOpen(true)}
           />
         )}
 
@@ -294,6 +298,12 @@ export function App() {
         currentProfile={userProfile}
         onLogin={handleStudentLogin}
         isFirebaseActive={isFirebaseActive}
+      />
+
+      {/* Guide & Mastery Principles Modal */}
+      <GuideModal
+        isOpen={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
       />
 
     </div>

@@ -14,7 +14,8 @@ import {
   Home,
   BookOpen,
   Brain,
-  RotateCcw
+  RotateCcw,
+  HelpCircle
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -22,6 +23,7 @@ interface NavbarProps {
   currentMode: StudyMode;
   onSelectMode: (mode: StudyMode) => void;
   onOpenLogin: () => void;
+  onOpenGuide?: () => void;
   onUpdateTheme: (color: ThemeColor) => void;
   speechRate: number;
   onToggleSpeechRate: () => void;
@@ -43,6 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentMode,
   onSelectMode,
   onOpenLogin,
+  onOpenGuide,
   onUpdateTheme,
   speechRate,
   onToggleSpeechRate,
@@ -130,6 +133,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               <UserCheck className="w-4 h-4 text-indigo-600 shrink-0" />
               <span>座號 {userProfile.seatNumber}</span>
             </button>
+
+            {/* Help / Guide Modal Button */}
+            {onOpenGuide && (
+              <button
+                onClick={() => {
+                  soundSynth.playFlip();
+                  onOpenGuide();
+                }}
+                className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs sm:text-sm font-extrabold shadow-xs transition-all shrink-0 active:scale-95"
+                title="查看遊戲說明與通關原則"
+              >
+                <HelpCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span className="hidden sm:inline">通關指南</span>
+              </button>
+            )}
 
             {/* Daily Streak & Stars */}
             <div className="flex items-center space-x-1.5 bg-slate-100 px-2.5 py-1.5 rounded-full text-xs sm:text-sm font-bold text-slate-700 shrink-0">
