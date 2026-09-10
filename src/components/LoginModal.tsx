@@ -37,7 +37,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     if (!seat.trim()) return;
     const formattedSeat = seat.trim().padStart(2, '0');
     soundSynth.playCorrect();
-    onLogin(formattedSeat, '201', color);
+    onLogin(formattedSeat, '205', color);
     onClose();
   };
 
@@ -103,7 +103,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   onClick={() => {
                     setSeat(num);
                     soundSynth.playCorrect();
-                    onLogin(num, '201', color);
+                    onLogin(num, '205', color);
                     onClose();
                   }}
                   className={`py-2.5 rounded-xl text-xs font-black transition-all border flex items-center justify-center ${

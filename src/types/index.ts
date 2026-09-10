@@ -35,7 +35,7 @@ export interface LevelProgress {
 
 export interface UserProfile {
   seatNumber: string;         // 座號 e.g. "05"
-  classCode?: string;         // 班級代碼 e.g. "201"
+  classCode?: string;         // 班級代碼 e.g. "205"
   themeColor: ThemeColor;
   unlockedLevel: number;      // 目前解鎖到的關卡 (1~6)
   lastActive: string;         // 上次活躍時間

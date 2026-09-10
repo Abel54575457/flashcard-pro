@@ -195,7 +195,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
         <div className="relative z-10 space-y-4">
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold uppercase tracking-wider">
             <Trophy className="w-3.5 h-3.5 text-yellow-300" />
-            <span>觀光餐旅 201 班 - 學習英雄榜</span>
+            <span>觀光餐旅 205 班 - 學習英雄榜</span>
           </div>
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

@@ -47,7 +47,7 @@ export const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose }) => {
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h2 className="text-xl sm:text-2xl font-bold text-stone-900 font-serif">靜心學習 ‧ 通關指南</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-stone-900 font-serif">觀光單字自主學習 ‧ 通關指南</h2>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
                 新手必讀
               </span>
@@ -187,7 +187,7 @@ export const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose }) => {
                   <span className="text-[11px] font-semibold bg-stone-100 text-stone-700 px-2 py-0.5 rounded-full">基礎累積</span>
                 </div>
                 <p className="text-xs text-stone-600 leading-relaxed">
-                  顯示英文單字、KK音標、朗讀與中文例句。翻卡後自行評定「記得」、「模糊」或「忘記」，系統會自動安排艾賓浩斯複習時機。
+                  顯示英文單字、KK音標、朗讀與中文例句。翻卡後自行評定「記得」、「模糊」或「忘記」，系統會自動安排最佳複習時機。
                 </p>
               </div>
 
@@ -286,7 +286,7 @@ export const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose }) => {
               <div className="p-4 rounded-2xl bg-white border border-stone-200 space-y-1">
                 <h3 className="font-bold text-stone-900 flex items-center space-x-2 text-sm">
                   <Brain className="w-4 h-4 text-amber-700" />
-                  <span>艾賓浩斯遺忘曲線原理</span>
+                  <span>間隔重複記憶曲線原理</span>
                 </h3>
                 <p className="text-xs text-stone-600">
                   學習新單字後 24 小時內會遺忘約 70% 內容。本系統透過間隔重複算法幫你記最久！

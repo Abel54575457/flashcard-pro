@@ -110,7 +110,7 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
               </div>
 
               <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-white font-serif leading-snug">
-                靜心學習 ‧ 艾賓浩斯記憶相伴
+                觀光餐旅專業單字自主學習
               </h1>
             </div>
 
@@ -130,12 +130,12 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
 
           </div>
 
-          {/* Ebbinghaus Review Card */}
+          {/* Review Card */}
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-5 border border-white/10 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Brain className="w-4 h-4 text-amber-400" />
-                <span className="font-bold text-sm text-stone-200">艾賓浩斯記憶池</span>
+                <span className="font-bold text-sm text-stone-200">待複習單字池</span>
               </div>
               {dueCount > 0 ? (
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500 text-white animate-pulse">
@@ -167,7 +167,7 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
               }`}
             >
               <Zap className="w-4 h-4" />
-              <span>{dueCount > 0 ? `靜心複習 (${dueCount}個單字)` : '複習池已清空'}</span>
+              <span>{dueCount > 0 ? `開始複習 (${dueCount}個單字)` : '複習池已清空'}</span>
             </button>
           </div>
 

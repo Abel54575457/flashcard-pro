@@ -76,7 +76,7 @@ export const MistakeNotebook: React.FC<MistakeNotebookProps> = ({
           }`}
         >
           <Brain className="w-4 h-4" />
-          <span>艾賓浩斯待複習池 ({dueWords.length})</span>
+          <span>待複習單字池 ({dueWords.length})</span>
         </button>
 
         <button
@@ -99,7 +99,7 @@ export const MistakeNotebook: React.FC<MistakeNotebookProps> = ({
       <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-black text-slate-900">
-            {activeTab === 'due' ? '艾賓浩斯衰退提醒' : '強化弱點集中訓練'}
+            {activeTab === 'due' ? '記憶衰退溫習提醒' : '強化弱點集中訓練'}
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             {activeTab === 'due'

@@ -8,7 +8,7 @@ const CUSTOM_WORDS_KEY = 'flashcard_pro_custom_words';
 
 const getSeatKey = (seat: string) => `flashcard_pro_user_profile_${seat}`;
 
-export function createDefaultProfile(seatNumber: string = '01', classCode: string = '201'): UserProfile {
+export function createDefaultProfile(seatNumber: string = '01', classCode: string = '205'): UserProfile {
   return {
     seatNumber,
     classCode,

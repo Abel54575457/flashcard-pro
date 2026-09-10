@@ -117,7 +117,7 @@ export function App() {
     setCurrentMode(mode);
   };
 
-  // 開啟艾賓浩斯待複習池
+  // 開啟待複習池
   const handleStartDueReview = () => {
     const dueWords = words.filter((w) => isWordDueForReview(userProfile.wordStats[w.id]));
     if (dueWords.length > 0) {
@@ -132,7 +132,7 @@ export function App() {
     setCurrentMode('flashcard');
   };
 
-  // 刷卡評定反饋 (更新艾賓浩斯算法與解鎖邏輯)
+  // 刷卡評定反饋 (更新間隔重複算法與解鎖邏輯)
   const handleUpdateWordStat = (wordId: string, rating: 'remembered' | 'fuzzy' | 'forgot') => {
     if (!userProfile) return;
 
@@ -296,7 +296,7 @@ export function App() {
       <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs font-semibold text-slate-500 space-y-1">
         <p>FlashCard Pro - 學生單字記憶曲線字卡系統 &copy; {new Date().getFullYear()}</p>
         <p className="text-[11px] text-slate-400">
-          結合萊特納 5 箱位艾賓浩斯記憶法 (Ebbinghaus Spaced Repetition) | 支援 Firebase 雲端與離線 LocalStorage
+          結合萊特納 5 箱位間隔重複記憶法 (Spaced Repetition System) | 支援 Firebase 雲端與離線 LocalStorage
         </p>
       </footer>
 
