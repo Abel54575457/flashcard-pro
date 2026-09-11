@@ -43,6 +43,9 @@ export interface UserProfile {
   stars: number;              // 星星點數
   progress: Record<string, LevelProgress>; // key: e.g. "level1", "level2"
   wordStats: Record<string, WordStat>;     // key: wordId e.g. "w_101"
+  lineDisplayName?: string;   // LINE 暱稱 (選用)
+  linePictureUrl?: string;    // LINE 大頭貼 (選用)
+  lineUserId?: string;        // LINE User ID (選用)
 }
 
 export interface FirebaseConfigInput {

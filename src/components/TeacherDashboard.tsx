@@ -47,6 +47,19 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
   // 學生名冊 Firestore / Local 資料
   const [students, setStudents] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // LINE LIFF 設定狀態
+  const [liffIdInput, setLiffIdInput] = useState(getSavedLiffId());
+  const [liffMsg, setLiffMsg] = useState('');
+
+  const handleSaveLiffId = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveLiffId(liffIdInput);
+    setLiffMsg('✅ LINE LIFF App ID 已成功保存！');
+    soundSynth.playCorrect();
+  };
   const [searchQuery, setSearchQuery] = useState('');
 
   // 單字編輯模態視窗
@@ -578,6 +591,56 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               儲存並測試 Firebase 連線
             </button>
           </form>
+
+          {/* LINE LIFF Configuration */}
+          <div className="pt-6 border-t border-slate-200 space-y-4">
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xl">💬</span>
+                <h3 className="text-lg font-black text-slate-900">LINE LIFF 聊天室整合設定</h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                填入 LINE Developers 的 LIFF App ID，即可讓學生在 LINE 聊天室點擊連結自動登入與顯示 LINE 頭像。
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveLiffId} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  LIFF App ID (例如: 2001234567-AbcdEfgh)
+                </label>
+                <input
+                  type="text"
+                  value={liffIdInput}
+                  onChange={(e) => setLiffIdInput(e.target.value)}
+                  placeholder="2001234567-AbcdEfgh"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              {liffMsg && (
+                <p className="text-xs font-bold p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  {liffMsg}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-all"
+              >
+                儲存 LINE LIFF 設定
+              </button>
+            </form>
+
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-600 space-y-1.5">
+              <span className="font-bold text-slate-900 block">📌 LINE Developers 建立 3 步驟：</span>
+              <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
+                <li>前往 <a href="https://developers.line.biz/" target="_blank" rel="noreferrer" className="text-indigo-600 underline">LINE Developers Console</a> 建立 Provider 與 Line Login Channel。</li>
+                <li>點擊 <strong>LIFF</strong> 頁籤 ➔ 點擊 <strong>Add</strong> 建立 LIFF App。</li>
+                <li>將 Endpoint URL 設定為 <code className="bg-white px-1 py-0.5 rounded border border-slate-200">https://flashcard-pro-app-25c7f.web.app</code> 並複製 LIFF ID 貼至上方儲存即可！</li>
+              </ol>
+            </div>
+          </div>
         </div>
       )}
 

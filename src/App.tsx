@@ -17,6 +17,7 @@ import { Leaderboard } from './components/Leaderboard';
 import { TeacherDashboard } from './components/TeacherDashboard';
 
 import { initAudioUnlock } from './services/tts';
+import { initLiff, getLiffUserProfile } from './services/liff';
 
 export function App() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -57,6 +58,23 @@ export function App() {
           const merged = mergeUserProfiles(curr, remote);
           saveLocalProfile(merged);
           return merged;
+        });
+      }
+    }).catch(() => {});
+
+    // 初始化 LINE LIFF，若於 LINE 聊天室開啟則自動辨識頭像與暱稱
+    getLiffUserProfile().then((liffUser) => {
+      if (liffUser) {
+        setUserProfile((curr) => {
+          if (!curr) return curr;
+          const updated = {
+            ...curr,
+            lineDisplayName: liffUser.displayName,
+            linePictureUrl: liffUser.pictureUrl,
+            lineUserId: liffUser.userId,
+          };
+          saveLocalProfile(updated);
+          return updated;
         });
       }
     }).catch(() => {});

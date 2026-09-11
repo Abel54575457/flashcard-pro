@@ -123,11 +123,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                 soundSynth.playFlip();
                 onOpenLogin();
               }}
-              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-200/80 text-stone-800 text-xs font-bold transition-all active:scale-95 shrink-0"
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-200/80 text-stone-800 text-xs font-bold transition-all active:scale-95 shrink-0"
               title="點擊切換座號"
             >
-              <User className="w-3.5 h-3.5 text-amber-700" />
-              <span>座號 {userProfile.seatNumber}</span>
+              {userProfile.linePictureUrl ? (
+                <img
+                  src={userProfile.linePictureUrl}
+                  alt={userProfile.lineDisplayName || 'LINE'}
+                  className="w-4 h-4 rounded-full border border-emerald-500 object-cover"
+                />
+              ) : (
+                <User className="w-3.5 h-3.5 text-amber-700" />
+              )}
+              <span>
+                {userProfile.lineDisplayName ? `${userProfile.lineDisplayName} (${userProfile.seatNumber})` : `座號 ${userProfile.seatNumber}`}
+              </span>
             </button>
 
             {/* Daily Streak & Stars (Compact) */}
