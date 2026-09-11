@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, WordItem, StudyMode, ThemeColor, WordStat } from './types';
-import { loadUserProfile, loadUserProfileSync, saveLocalProfile, getLocalProfile, getCustomWords, saveCustomWords, resetCustomWordsToDefault, mergeUserProfiles } from './services/storage';
+import { loadUserProfile, loadUserProfileSync, saveLocalProfile, getLocalProfile, getLocalProfileForSeat, getCustomWords, saveCustomWords, resetCustomWordsToDefault, mergeUserProfiles, createDefaultProfile } from './services/storage';
 import { isWordDueForReview, updateWordStatOnResult, calculateMasteryRate } from './services/spacedRepetition';
 import { initFirebase, fetchUserFromFirestore } from './services/firebase';
 import { soundSynth } from './services/soundEffects';
@@ -78,16 +78,17 @@ export function App() {
 
   // 學生切換座號登入 (零延遲同步更新)
   const handleStudentLogin = (seatNumber: string, classCode: string, themeColor: ThemeColor) => {
-    const existing = loadUserProfileSync(seatNumber);
-    const updated: UserProfile = {
-      ...existing,
+    const local = getLocalProfileForSeat(seatNumber);
+    const initialBase = local || createDefaultProfile(seatNumber, classCode);
+    const initialProfile: UserProfile = {
+      ...initialBase,
       seatNumber,
       classCode,
       themeColor,
     };
+
     // 1. 立即同步更新 React 狀態與 LocalStorage (0ms 延遲)
-    setUserProfile(updated);
-    saveLocalProfile(updated);
+    setUserProfile(initialProfile);
 
     // 2. 背景同步 Firebase 雲端資料 (無損合併，確保進度與關卡不被洗掉)
     fetchUserFromFirestore(seatNumber).then((remote) => {
@@ -95,14 +96,18 @@ export function App() {
         setUserProfile((curr) => {
           if (curr && curr.seatNumber === seatNumber) {
             const merged = mergeUserProfiles(curr, remote);
-            const finalProfile = { ...merged, themeColor };
+            const finalProfile = { ...merged, themeColor, classCode };
             saveLocalProfile(finalProfile);
             return finalProfile;
           }
           return curr;
         });
+      } else {
+        saveLocalProfile(initialProfile);
       }
-    }).catch(() => {});
+    }).catch(() => {
+      saveLocalProfile(initialProfile);
+    });
   };
 
   // 切換主題顏色
@@ -148,15 +153,24 @@ export function App() {
       [wordId]: updatedStat,
     };
 
-    // 計算關卡解鎖條件 (目前關卡熟練度 >= 80% 解鎖下個 Level)
-    const currentLevelWordIds = words.filter((w) => w.levelId === selectedLevelId).map((w) => w.id);
-    const masteryRate = calculateMasteryRate(currentLevelWordIds, newWordStats);
+    // 全關卡解鎖條件評估：只要任一關卡熟練度 >= 80%，自動解鎖下一關
+    let nextUnlockedLevel = userProfile.unlockedLevel || 1;
+    for (let lvl = 1; lvl <= 6; lvl++) {
+      const lvlWordIds = words.filter((w) => w.levelId === lvl).map((w) => w.id);
+      if (lvlWordIds.length > 0) {
+        const rate = calculateMasteryRate(lvlWordIds, newWordStats);
+        if (rate >= 0.8 && lvl >= nextUnlockedLevel && lvl < 6) {
+          nextUnlockedLevel = lvl + 1;
+        }
+      }
+    }
 
-    let nextUnlockedLevel = userProfile.unlockedLevel;
-    if (masteryRate >= 0.8 && selectedLevelId === userProfile.unlockedLevel && userProfile.unlockedLevel < 6) {
-      nextUnlockedLevel = userProfile.unlockedLevel + 1;
+    if (nextUnlockedLevel > userProfile.unlockedLevel) {
       soundSynth.playLevelClear();
     }
+
+    const currentLevelWordIds = words.filter((w) => w.levelId === selectedLevelId).map((w) => w.id);
+    const masteryRate = calculateMasteryRate(currentLevelWordIds, newWordStats);
 
     const updatedProfile: UserProfile = {
       ...userProfile,

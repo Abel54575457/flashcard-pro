@@ -74,17 +74,52 @@ export async function loginAnonymously(): Promise<string | null> {
   }
 }
 
-export async function syncUserToFirestore(userProfile: UserProfile): Promise<boolean> {
-  if (!db) {
+async function ensureAuth(): Promise<boolean> {
+  if (!db || !auth) {
     const initialized = initFirebase();
-    if (!initialized || !db) return false;
+    if (!initialized || !db || !auth) return false;
   }
+  if (!auth.currentUser) {
+    try {
+      await signInAnonymously(auth);
+    } catch {
+      // ignore
+    }
+  }
+  return true;
+}
+
+export async function syncUserToFirestore(userProfile: UserProfile): Promise<boolean> {
+  await ensureAuth();
+  if (!db) return false;
+
   try {
     const docRef = doc(db, 'users', userProfile.seatNumber);
-    await setDoc(docRef, {
-      ...userProfile,
-      lastActive: new Date().toISOString(),
-    }, { merge: true });
+    const snap = await getDoc(docRef);
+    let toSave = userProfile;
+
+    if (snap.exists()) {
+      const existingRemote = snap.data() as UserProfile;
+      const unlockedLevel = Math.max(userProfile.unlockedLevel || 1, existingRemote.unlockedLevel || 1);
+      const stars = Math.max(userProfile.stars || 0, existingRemote.stars || 0);
+      const streakDays = Math.max(userProfile.streakDays || 1, existingRemote.streakDays || 1);
+
+      const mergedProgress = { ...(existingRemote.progress || {}), ...(userProfile.progress || {}) };
+      const mergedWordStats = { ...(existingRemote.wordStats || {}), ...(userProfile.wordStats || {}) };
+
+      toSave = {
+        ...existingRemote,
+        ...userProfile,
+        unlockedLevel,
+        stars,
+        streakDays,
+        progress: mergedProgress,
+        wordStats: mergedWordStats,
+        lastActive: new Date().toISOString(),
+      };
+    }
+
+    await setDoc(docRef, toSave, { merge: true });
     return true;
   } catch (err) {
     console.warn('Firestore sync user failed:', err);
@@ -93,10 +128,9 @@ export async function syncUserToFirestore(userProfile: UserProfile): Promise<boo
 }
 
 export async function fetchUserFromFirestore(seatNumber: string): Promise<UserProfile | null> {
-  if (!db) {
-    const initialized = initFirebase();
-    if (!initialized || !db) return null;
-  }
+  await ensureAuth();
+  if (!db) return null;
+
   try {
     const docRef = doc(db, 'users', seatNumber);
     const snap = await getDoc(docRef);
@@ -111,10 +145,9 @@ export async function fetchUserFromFirestore(seatNumber: string): Promise<UserPr
 }
 
 export async function fetchAllStudentsFromFirestore(): Promise<UserProfile[]> {
-  if (!db) {
-    const initialized = initFirebase();
-    if (!initialized || !db) return [];
-  }
+  await ensureAuth();
+  if (!db) return [];
+
   try {
     const colRef = collection(db, 'users');
     const snap = await getDocs(colRef);
