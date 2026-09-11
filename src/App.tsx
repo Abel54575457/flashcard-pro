@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, WordItem, StudyMode, ThemeColor, WordStat } from './types';
-import { loadUserProfile, loadUserProfileSync, saveLocalProfile, getLocalProfile, getCustomWords, saveCustomWords, resetCustomWordsToDefault } from './services/storage';
+import { loadUserProfile, loadUserProfileSync, saveLocalProfile, getLocalProfile, getCustomWords, saveCustomWords, resetCustomWordsToDefault, mergeUserProfiles } from './services/storage';
 import { isWordDueForReview, updateWordStatOnResult, calculateMasteryRate } from './services/spacedRepetition';
 import { initFirebase, fetchUserFromFirestore } from './services/firebase';
 import { soundSynth } from './services/soundEffects';
@@ -49,11 +49,15 @@ export function App() {
     const initialProfile = loadUserProfileSync(initialSeat);
     setUserProfile(initialProfile);
 
-    // 背景同步遠端 Firebase，不阻塞畫面渲染
+    // 背景同步遠端 Firebase (無損合併，絕不上鎖或覆寫本機較高進度)
     fetchUserFromFirestore(initialSeat).then((remote) => {
       if (remote) {
-        setUserProfile((curr) => (curr?.seatNumber === initialSeat ? remote : curr));
-        saveLocalProfile(remote);
+        setUserProfile((curr) => {
+          if (!curr || curr.seatNumber !== initialSeat) return curr;
+          const merged = mergeUserProfiles(curr, remote);
+          saveLocalProfile(merged);
+          return merged;
+        });
       }
     }).catch(() => {});
   }, []);
@@ -85,15 +89,15 @@ export function App() {
     setUserProfile(updated);
     saveLocalProfile(updated);
 
-    // 2. 背景同步 Firebase 雲端資料 (不卡住 UI)
+    // 2. 背景同步 Firebase 雲端資料 (無損合併，確保進度與關卡不被洗掉)
     fetchUserFromFirestore(seatNumber).then((remote) => {
       if (remote) {
         setUserProfile((curr) => {
           if (curr && curr.seatNumber === seatNumber) {
-            return {
-              ...remote,
-              themeColor,
-            };
+            const merged = mergeUserProfiles(curr, remote);
+            const finalProfile = { ...merged, themeColor };
+            saveLocalProfile(finalProfile);
+            return finalProfile;
           }
           return curr;
         });

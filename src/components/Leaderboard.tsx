@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, WordItem } from '../types';
-import { getLocalProfileForSeat } from '../services/storage';
+import { getLocalProfileForSeat, mergeUserProfiles } from '../services/storage';
 import { fetchAllStudentsFromFirestore } from '../services/firebase';
 import { calculateMasteryRate } from '../services/spacedRepetition';
 import { soundSynth } from '../services/soundEffects';
@@ -64,50 +64,50 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
     const remoteMap = new Map<string, UserProfile>();
     remoteStudents.forEach((st) => remoteMap.set(st.seatNumber, st));
 
-    // 2. 彙整 01 ~ 35 號的完整進度
+    // 2. 彙整 01 ~ 35 號真實資料 (無損合併 LocalStorage 與 Firestore 數據)
     const list: StudentRankItem[] = [];
 
     for (let i = 1; i <= 35; i++) {
       const seatStr = String(i).padStart(2, '0');
       const isCurr = seatStr === currentProfile.seatNumber;
 
-      let profile: UserProfile | null = null;
+      const localProfile = getLocalProfileForSeat(seatStr);
+      const remoteProfile = remoteMap.get(seatStr) || null;
 
+      let merged: UserProfile | null = null;
       if (isCurr) {
-        profile = currentProfile;
-      } else if (remoteMap.has(seatStr)) {
-        profile = remoteMap.get(seatStr)!;
-      } else {
-        profile = getLocalProfileForSeat(seatStr);
+        merged = currentProfile;
+        if (remoteProfile) {
+          merged = mergeUserProfiles(merged, remoteProfile);
+        }
+      } else if (localProfile && remoteProfile) {
+        merged = mergeUserProfiles(localProfile, remoteProfile);
+      } else if (localProfile) {
+        merged = localProfile;
+      } else if (remoteProfile) {
+        merged = remoteProfile;
       }
 
-      if (profile) {
-        const mastery = calculateMasteryRate(allWordIds, profile.wordStats || {});
+      if (merged) {
+        const mastery = calculateMasteryRate(allWordIds, merged.wordStats || {});
         list.push({
           seatNumber: seatStr,
-          stars: profile.stars || 0,
-          streakDays: profile.streakDays || 1,
-          unlockedLevel: profile.unlockedLevel || 1,
+          stars: merged.stars || 0,
+          streakDays: merged.streakDays || 0,
+          unlockedLevel: merged.unlockedLevel || 1,
           masteryRate: mastery,
-          lastActive: profile.lastActive || new Date().toISOString(),
+          lastActive: merged.lastActive || '',
           isCurrentUser: isCurr,
         });
       } else {
-        // 若完全無紀錄，產生擬真初始同儕數據 (固定種子)
-        const pseudoSeed = (i * 7) % 30;
-        const pseudoStars = (pseudoSeed * 4) + (i % 3);
-        const pseudoStreak = (i % 5) + 1;
-        const pseudoLevel = Math.min(6, Math.floor(i / 6) + 1);
-        const pseudoMastery = Math.min(0.95, 0.15 + (pseudoSeed * 0.025));
-
         list.push({
           seatNumber: seatStr,
-          stars: pseudoStars,
-          streakDays: pseudoStreak,
-          unlockedLevel: pseudoLevel,
-          masteryRate: pseudoMastery,
-          lastActive: new Date(Date.now() - (i * 3600000)).toISOString(),
-          isCurrentUser: false,
+          stars: 0,
+          streakDays: 0,
+          unlockedLevel: 1,
+          masteryRate: 0,
+          lastActive: '',
+          isCurrentUser: isCurr,
         });
       }
     }
@@ -144,7 +144,10 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
 
   // 時間格式化
   const formatTimeAgo = (isoString: string) => {
-    const diffMs = Date.now() - new Date(isoString).getTime();
+    if (!isoString) return '尚無記錄';
+    const time = new Date(isoString).getTime();
+    if (isNaN(time)) return '尚無記錄';
+    const diffMs = Date.now() - time;
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);

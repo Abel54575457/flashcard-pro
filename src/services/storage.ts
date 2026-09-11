@@ -87,12 +87,79 @@ export function loadUserProfileSync(seatNumber: string): UserProfile {
   return newProfile;
 }
 
+export function mergeUserProfiles(local: UserProfile, remote: UserProfile): UserProfile {
+  if (!local) return remote;
+  if (!remote) return local;
+
+  const unlockedLevel = Math.max(local.unlockedLevel || 1, remote.unlockedLevel || 1);
+  const stars = Math.max(local.stars || 0, remote.stars || 0);
+  const streakDays = Math.max(local.streakDays || 1, remote.streakDays || 1);
+
+  // 合併 progress
+  const mergedProgress = { ...(local.progress || {}) };
+  if (remote.progress) {
+    Object.keys(remote.progress).forEach((lvlKey) => {
+      const pLoc = mergedProgress[lvlKey];
+      const pRem = remote.progress[lvlKey];
+      if (!pLoc) {
+        mergedProgress[lvlKey] = pRem;
+      } else if (pRem) {
+        mergedProgress[lvlKey] = {
+          completed: pLoc.completed || pRem.completed,
+          masteryRate: Math.max(pLoc.masteryRate || 0, pRem.masteryRate || 0),
+          starsEarned: Math.max(pLoc.starsEarned || 0, pRem.starsEarned || 0),
+          lastStudied: (pLoc.lastStudied && pRem.lastStudied)
+            ? (new Date(pLoc.lastStudied) > new Date(pRem.lastStudied) ? pLoc.lastStudied : pRem.lastStudied)
+            : (pLoc.lastStudied || pRem.lastStudied),
+        };
+      }
+    });
+  }
+
+  // 合併 wordStats
+  const mergedWordStats = { ...(local.wordStats || {}) };
+  if (remote.wordStats) {
+    Object.keys(remote.wordStats).forEach((wId) => {
+      const sLoc = mergedWordStats[wId];
+      const sRem = remote.wordStats[wId];
+      if (!sLoc) {
+        mergedWordStats[wId] = sRem;
+      } else if (sRem) {
+        const locScore = (sLoc.box || 1) * 100 + (sLoc.reviewCount || 0);
+        const remScore = (sRem.box || 1) * 100 + (sRem.reviewCount || 0);
+        if (remScore > locScore) {
+          mergedWordStats[wId] = sRem;
+        }
+      }
+    });
+  }
+
+  const lastActive = (local.lastActive && remote.lastActive)
+    ? (new Date(local.lastActive) > new Date(remote.lastActive) ? local.lastActive : remote.lastActive)
+    : (local.lastActive || remote.lastActive || new Date().toISOString());
+
+  return {
+    ...local,
+    ...remote,
+    seatNumber: local.seatNumber || remote.seatNumber,
+    classCode: local.classCode || remote.classCode || '205',
+    themeColor: local.themeColor || remote.themeColor || 'emerald',
+    unlockedLevel,
+    stars,
+    streakDays,
+    progress: mergedProgress,
+    wordStats: mergedWordStats,
+    lastActive,
+  };
+}
+
 export async function loadUserProfile(seatNumber: string): Promise<UserProfile> {
   const profile = loadUserProfileSync(seatNumber);
   fetchUserFromFirestore(seatNumber)
     .then((remote) => {
       if (remote) {
-        const updated = updateStreakDays(remote);
+        const merged = mergeUserProfiles(profile, remote);
+        const updated = updateStreakDays(merged);
         saveLocalProfile(updated);
       }
     })
