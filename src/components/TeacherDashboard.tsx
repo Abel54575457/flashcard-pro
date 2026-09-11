@@ -105,7 +105,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       setIsAuthenticated(true);
     } else {
       soundSynth.playWrong();
-      alert('密碼錯誤！預設教師密碼為: 205 或 teacher888');
+      alert('密碼錯誤，請重新輸入！');
     }
   };
 
