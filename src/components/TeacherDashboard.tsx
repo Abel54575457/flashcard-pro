@@ -658,9 +658,10 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-600 space-y-1.5">
               <span className="font-bold text-slate-900 block">📌 LINE Developers 建立 3 步驟：</span>
               <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
-                <li>前往 <a href="https://developers.line.biz/" target="_blank" rel="noreferrer" className="text-indigo-600 underline">LINE Developers Console</a> 建立 Provider 與 Line Login Channel。</li>
+                <li>前往 <a href="https://developers.line.biz/" target="_blank" rel="noreferrer" className="text-indigo-600 underline font-bold">LINE Developers Console</a> 建立 Provider 與 Line Login Channel。</li>
                 <li>點擊 <strong>LIFF</strong> 頁籤 ➔ 點擊 <strong>Add</strong> 建立 LIFF App。</li>
-                <li>將 Endpoint URL 設定為 <code className="bg-white px-1 py-0.5 rounded border border-slate-200">https://flashcard-pro-app-25c7f.web.app</code> 並複製 LIFF ID 貼至上方儲存即可！</li>
+                <li>將 Endpoint URL 設定為 <code className="bg-white px-1 py-0.5 rounded border border-slate-200">https://flashcard-pro-app-25c7f.web.app</code> 並複製 LIFF ID 貼至上方儲存。</li>
+                <li><strong className="text-rose-600">【重要】</strong> 在 Channel 頁面上方將狀態從 <strong>「Developing」(開發中)</strong> 按鈕切換為 <strong>「Published」(已公開)</strong>，學生與非開發者帳號才能順利開啟！</li>
               </ol>
             </div>
           </div>
