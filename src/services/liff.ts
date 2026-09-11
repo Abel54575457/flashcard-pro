@@ -1,6 +1,7 @@
 import liff from '@line/liff';
 
 const LIFF_ID_KEY = 'flashcard_pro_liff_id';
+const DEFAULT_LIFF_ID = '2011565097-n1Ab1IlP';
 
 export interface LiffUserProfile {
   userId: string;
@@ -10,8 +11,8 @@ export interface LiffUserProfile {
 }
 
 export function getSavedLiffId(): string {
-  if (typeof window === 'undefined') return '';
-  return localStorage.getItem(LIFF_ID_KEY) || '';
+  if (typeof window === 'undefined') return DEFAULT_LIFF_ID;
+  return localStorage.getItem(LIFF_ID_KEY) || DEFAULT_LIFF_ID;
 }
 
 export function saveLiffId(liffId: string): void {
