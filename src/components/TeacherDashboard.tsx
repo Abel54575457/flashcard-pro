@@ -99,12 +99,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
   const handlePasscodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passcode === 'teacher888' || passcode === '1234') {
+    const cleanPass = passcode.trim();
+    if (cleanPass === '205' || cleanPass === '205班' || cleanPass === 'teacher888' || cleanPass === '1234') {
       soundSynth.playCorrect();
       setIsAuthenticated(true);
     } else {
       soundSynth.playWrong();
-      alert('密碼錯誤！預設教師密碼為: teacher888');
+      alert('密碼錯誤！預設教師密碼為: 205 或 teacher888');
     }
   };
 
