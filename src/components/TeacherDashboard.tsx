@@ -47,7 +47,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'students' | 'words' | 'firebase'>('students');
 
   // 學生名冊 Firestore / Local 資料
-  const [students, setStudents] = useState<UserProfile[]>([]);
+  const [students, setStudents] = useState<UserProfile[]>(() => {
+    return currentProfile ? [currentProfile] : [];
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -89,13 +91,18 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   }, [isAuthenticated]);
 
   const loadStudentsData = async () => {
+    setIsLoading(true);
     const remote = await fetchAllStudentsFromFirestore();
     if (remote && remote.length > 0) {
-      setStudents(remote);
+      // 合併雲端學生與目前登入者（確保當前座號也出現）
+      const map = new Map<string, UserProfile>();
+      if (currentProfile) map.set(currentProfile.seatNumber, currentProfile);
+      remote.forEach((st) => map.set(st.seatNumber, st));
+      setStudents(Array.from(map.values()));
     } else {
-      // 顯示目前登入者作為範例
-      setStudents([currentProfile]);
+      setStudents(currentProfile ? [currentProfile] : []);
     }
+    setIsLoading(false);
   };
 
   const handlePasscodeSubmit = (e: React.FormEvent) => {
@@ -624,6 +631,20 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                 <p className="text-xs font-bold p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
                   {liffMsg}
                 </p>
+              )}
+
+              {liffIdInput.trim() && (
+                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs space-y-2">
+                  <p className="font-extrabold text-emerald-900 flex items-center space-x-1">
+                    <span>🔗 學生專用 LINE 群組分享連結：</span>
+                  </p>
+                  <code className="block bg-white p-2.5 rounded-xl border border-emerald-300 font-mono text-xs text-emerald-700 select-all font-bold">
+                    https://liff.line.me/{liffIdInput.trim()}
+                  </code>
+                  <p className="text-[11px] text-emerald-700 leading-relaxed">
+                    💡 將上方連結複製貼發至 LINE 班級群組，學生點擊即可直接在 LINE 內開啟字卡，並自動帶入 LINE 大頭貼與暱稱！
+                  </p>
+                </div>
               )}
 
               <button
