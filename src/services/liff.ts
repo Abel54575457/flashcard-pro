@@ -75,8 +75,86 @@ export function triggerLiffLogin(): void {
   }
 }
 
-export function triggerLiffLogout(): void {
-  if (isLiffInitialized && liff.isLoggedIn()) {
-    liff.logout();
+const CHANNEL_TOKEN_KEY = 'flashcard_pro_line_channel_token';
+
+export function getSavedChannelToken(): string {
+  if (typeof window === 'undefined') return '';
+  return localStorage.getItem(CHANNEL_TOKEN_KEY) || '';
+}
+
+export function saveChannelToken(token: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(CHANNEL_TOKEN_KEY, token.trim());
   }
 }
+
+export async function sendLinePushReminder(
+  channelToken: string,
+  toUserId: string,
+  studentName: string,
+  seatNumber: string,
+  dueCount: number,
+  streakDays: number
+): Promise<boolean> {
+  if (!channelToken || !toUserId) return false;
+  const liffUrl = `https://liff.line.me/${getSavedLiffId()}`;
+
+  const payload = {
+    to: toUserId,
+    messages: [
+      {
+        type: 'flex',
+        altText: `📢 課後單字複習提醒：座號 ${seatNumber} 今日有 ${dueCount} 個單字待複習！`,
+        contents: {
+          type: 'bubble',
+          size: 'mega',
+          header: {
+            type: 'box',
+            layout: 'vertical',
+            backgroundColor: '#06C755',
+            contents: [
+              { type: 'text', text: '📢 課後單字複習提醒', weight: 'bold', color: '#FFFFFF', size: 'xs' },
+              { type: 'text', text: `${studentName || '同學'} (座號 ${seatNumber})`, weight: 'bold', color: '#FFFFFF', size: 'xl', margin: 'sm' }
+            ]
+          },
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              { type: 'text', text: `📚 您今日有 ${dueCount} 個單字已進入記憶曲線複習池囉！`, wrap: true, size: 'sm', color: '#333333' },
+              { type: 'text', text: `🔥 連續學習天數：${streakDays || 1} 天`, size: 'xs', color: '#888888', margin: 'md' }
+            ]
+          },
+          footer: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'button',
+                action: { type: 'uri', label: '🚀 花 3 分鐘開始刷單字', uri: liffUrl },
+                style: 'primary',
+                color: '#06C755'
+              }
+            ]
+          }
+        }
+      }
+    ]
+  };
+
+  try {
+    const res = await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${channelToken.trim()}`
+      },
+      body: JSON.stringify(payload)
+    });
+    return res.ok;
+  } catch (err) {
+    console.error('Push message failed:', err);
+    return false;
+  }
+}
+

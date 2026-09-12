@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, WordItem, FirebaseConfigInput } from '../types';
-import { calculateMasteryRate } from '../services/spacedRepetition';
+import { calculateMasteryRate, isWordDueForReview } from '../services/spacedRepetition';
 import { fetchAllStudentsFromFirestore, saveFirebaseConfig, getSavedFirebaseConfig, initFirebase } from '../services/firebase';
 import { mergeCustomWords } from '../services/storage';
 import { soundSynth } from '../services/soundEffects';
 import { exportWordsToCSV, downloadCSVFile, parseCSVToWords } from '../utils/csvHelper';
-import { getSavedLiffId, saveLiffId } from '../services/liff';
+import { getSavedLiffId, saveLiffId, getSavedChannelToken, saveChannelToken, sendLinePushReminder } from '../services/liff';
 import {
   GraduationCap,
   Users,
@@ -57,12 +57,65 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const [liffIdInput, setLiffIdInput] = useState(getSavedLiffId());
   const [liffMsg, setLiffMsg] = useState('');
 
+  // LINE Channel Token & 推播提醒狀態
+  const [channelTokenInput, setChannelTokenInput] = useState(getSavedChannelToken());
+  const [channelTokenMsg, setChannelTokenMsg] = useState('');
+  const [isSendingReminders, setIsSendingReminders] = useState(false);
+  const [reminderStatusMsg, setReminderStatusMsg] = useState('');
+
   const handleSaveLiffId = (e: React.FormEvent) => {
     e.preventDefault();
     saveLiffId(liffIdInput);
     setLiffMsg('✅ LINE LIFF App ID 已成功保存！');
     soundSynth.playCorrect();
   };
+
+  const handleSaveChannelToken = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveChannelToken(channelTokenInput);
+    setChannelTokenMsg('✅ LINE Channel Access Token 已成功保存！');
+    soundSynth.playCorrect();
+  };
+
+  const handleSendReminders = async () => {
+    const token = channelTokenInput.trim() || getSavedChannelToken();
+    if (!token) {
+      alert('請先至「Firebase 雲端設定」填寫並儲存 LINE Channel Access Token，才能推播提醒卡片！');
+      setActiveTab('firebase');
+      return;
+    }
+
+    setIsSendingReminders(true);
+    setReminderStatusMsg('⏳ 正在檢查全班學習進度並發送 LINE 背單字提醒...');
+
+    let sentCount = 0;
+    for (const st of students) {
+      if (st.lineUserId) {
+        const dueCount = words.filter((w) => isWordDueForReview(st.wordStats?.[w.id])).length;
+        if (dueCount > 0) {
+          const ok = await sendLinePushReminder(
+            token,
+            st.lineUserId,
+            st.lineDisplayName || `座號 ${st.seatNumber}`,
+            st.seatNumber,
+            dueCount,
+            st.streakDays || 1
+          );
+          if (ok) sentCount++;
+        }
+      }
+    }
+
+    setIsSendingReminders(false);
+    if (sentCount > 0) {
+      soundSynth.playLevelClear();
+      setReminderStatusMsg(`🎉 成功發送 LINE 個人化課後複習提醒卡片給 ${sentCount} 位學生！`);
+    } else {
+      soundSynth.playWrong();
+      setReminderStatusMsg('ℹ️ 目前無需發送：暫無已綁定 LINE 帳號且有待複習單字的學生。');
+    }
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
 
   // 單字編輯模態視窗
@@ -379,15 +432,30 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       {/* Tab 1: Students Leaderboard */}
       {activeTab === 'students' && (
         <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h2 className="text-lg font-black text-slate-900">班級各座號學習排行榜</h2>
-            <button
-              onClick={loadStudentsData}
-              className="text-xs font-bold text-indigo-600 hover:underline"
-            >
-              🔄 重新整理資料
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleSendReminders}
+                disabled={isSendingReminders}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-xs shadow-sm flex items-center space-x-1.5 transition-all"
+              >
+                <span>📢 一鍵發送 LINE 課後背單字提醒</span>
+              </button>
+              <button
+                onClick={loadStudentsData}
+                className="text-xs font-bold text-indigo-600 hover:underline"
+              >
+                🔄 重新整理資料
+              </button>
+            </div>
           </div>
+
+          {reminderStatusMsg && (
+            <p className="text-xs font-bold p-3 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200">
+              {reminderStatusMsg}
+            </p>
+          )}
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -633,27 +701,56 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                 </p>
               )}
 
-              {liffIdInput.trim() && (
-                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs space-y-2">
-                  <p className="font-extrabold text-emerald-900 flex items-center space-x-1">
-                    <span>🔗 學生專用 LINE 群組分享連結：</span>
-                  </p>
-                  <code className="block bg-white p-2.5 rounded-xl border border-emerald-300 font-mono text-xs text-emerald-700 select-all font-bold">
-                    https://liff.line.me/{liffIdInput.trim()}
-                  </code>
-                  <p className="text-[11px] text-emerald-700 leading-relaxed">
-                    💡 將上方連結複製貼發至 LINE 班級群組，學生點擊即可直接在 LINE 內開啟字卡，並自動帶入 LINE 大頭貼與暱稱！
-                  </p>
-                </div>
-              )}
-
               <button
                 type="submit"
-                className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-all"
+                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xs transition-all"
               >
                 儲存 LINE LIFF 設定
               </button>
             </form>
+
+            {/* LINE Messaging API Channel Access Token Form */}
+            <form onSubmit={handleSaveChannelToken} className="space-y-3 pt-2">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  LINE Messaging API Channel Access Token (推播提醒專用)
+                </label>
+                <input
+                  type="password"
+                  value={channelTokenInput}
+                  onChange={(e) => setChannelTokenInput(e.target.value)}
+                  placeholder="貼上很長的 Channel Access Token (long-lived)..."
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {channelTokenMsg && (
+                <p className="text-xs font-bold p-3 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200">
+                  {channelTokenMsg}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-xs transition-all"
+              >
+                儲存 Channel Access Token
+              </button>
+            </form>
+
+            {liffIdInput.trim() && (
+              <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs space-y-2">
+                <p className="font-extrabold text-emerald-900 flex items-center space-x-1">
+                  <span>🔗 學生專用 LINE 群組分享連結：</span>
+                </p>
+                <code className="block bg-white p-2.5 rounded-xl border border-emerald-300 font-mono text-xs text-emerald-700 select-all font-bold">
+                  https://liff.line.me/{liffIdInput.trim()}
+                </code>
+                <p className="text-[11px] text-emerald-700 leading-relaxed">
+                  💡 將上方連結複製貼發至 LINE 班級群組，學生點擊即可直接在 LINE 內開啟字卡，並自動帶入 LINE 大頭貼與暱稱！
+                </p>
+              </div>
+            )}
 
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-600 space-y-1.5">
               <span className="font-bold text-slate-900 block">📌 LINE Developers 建立 3 步驟：</span>
