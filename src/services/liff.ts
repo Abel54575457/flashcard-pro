@@ -76,10 +76,11 @@ export function triggerLiffLogin(): void {
 }
 
 const CHANNEL_TOKEN_KEY = 'flashcard_pro_line_channel_token';
+const DEFAULT_CHANNEL_TOKEN = 'gVXr/IWBKPZpLCicensd60JsDNAhN382gaZZJertJpppP7SWcfCCoSSdmMa2IFIMAdOzPRGBE/IJjRhtN5elpjD0djQ7fR49VG642tLTSpyqkMmPwlzrifsoRpbttKZOmxUmmiilC1qLwGp4/gjTcXAdB04t89/10/w1cDnyilFU=';
 
 export function getSavedChannelToken(): string {
-  if (typeof window === 'undefined') return '';
-  return localStorage.getItem(CHANNEL_TOKEN_KEY) || '';
+  if (typeof window === 'undefined') return DEFAULT_CHANNEL_TOKEN;
+  return localStorage.getItem(CHANNEL_TOKEN_KEY) || DEFAULT_CHANNEL_TOKEN;
 }
 
 export function saveChannelToken(token: string): void {
