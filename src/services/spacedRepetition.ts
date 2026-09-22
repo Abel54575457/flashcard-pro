@@ -69,19 +69,21 @@ export function updateWordStatOnResult(
 export function isWordDueForReview(stat: WordStat | undefined): boolean {
   if (!stat) return true; // 新單字視為可複習
   if (stat.level === 'new') return true;
+  if (!stat.nextReviewDate) return true;
   const nextDate = new Date(stat.nextReviewDate).getTime();
   const now = Date.now();
-  return now >= nextDate;
+  return isNaN(nextDate) || now >= nextDate;
 }
 
 export function calculateMasteryRate(
   wordIds: string[],
-  wordStats: Record<string, WordStat>
+  wordStats: Record<string, WordStat> | undefined
 ): number {
   if (!wordIds || wordIds.length === 0) return 0;
+  const safeStats = wordStats || {};
   let totalScore = 0;
   for (const id of wordIds) {
-    const stat = wordStats[id];
+    const stat = safeStats[id];
     if (stat) {
       if (stat.box >= 4 || stat.level === 'mastered') {
         totalScore += 1.0;

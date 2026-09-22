@@ -8,6 +8,7 @@ import { soundSynth } from './services/soundEffects';
 import { Navbar } from './components/Navbar';
 import { LoginModal } from './components/LoginModal';
 import { GuideModal } from './components/GuideModal';
+import { VocabularyMasterListModal } from './components/VocabularyMasterListModal';
 import { LevelSelector } from './components/LevelSelector';
 import { FlashcardMode } from './components/FlashcardMode';
 import { ListeningQuiz } from './components/ListeningQuiz';
@@ -29,6 +30,7 @@ export function App() {
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [isLoginOpen, setIsLoginOpen] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
+  const [isMasterListOpen, setIsMasterListOpen] = useState<boolean>(false);
   const [isFirebaseActive, setIsFirebaseActive] = useState<boolean>(false);
 
   // 初始化載入
@@ -48,7 +50,22 @@ export function App() {
     const local = getLocalProfile();
     const initialSeat = local?.seatNumber || '01';
     const initialProfile = loadUserProfileSync(initialSeat);
-    setUserProfile(initialProfile);
+    
+    // 動態重新計算解鎖關卡 (確保新增關卡 Unit 7 如上一關卡通關即可解鎖)
+    const maxLevelId = Math.max(...loadedWords.map((w) => w.levelId || 1), 7);
+    let autoUnlocked = initialProfile.unlockedLevel || 1;
+    for (let lvl = 1; lvl <= maxLevelId; lvl++) {
+      const lvlWordIds = loadedWords.filter((w) => w.levelId === lvl).map((w) => w.id);
+      if (lvlWordIds.length > 0) {
+        const rate = calculateMasteryRate(lvlWordIds, initialProfile.wordStats);
+        if (rate >= 0.8 && lvl >= autoUnlocked && lvl < maxLevelId) {
+          autoUnlocked = lvl + 1;
+        }
+      }
+    }
+    const finalInitialProfile = { ...initialProfile, unlockedLevel: autoUnlocked };
+    setUserProfile(finalInitialProfile);
+    saveLocalProfile(finalInitialProfile);
 
     // 背景同步遠端 Firebase (無損合併，絕不上鎖或覆寫本機較高進度)
     fetchUserFromFirestore(initialSeat).then((remote) => {
@@ -56,8 +73,19 @@ export function App() {
         setUserProfile((curr) => {
           if (!curr || curr.seatNumber !== initialSeat) return curr;
           const merged = mergeUserProfiles(curr, remote);
-          saveLocalProfile(merged);
-          return merged;
+          let mergedUnlocked = merged.unlockedLevel || 1;
+          for (let lvl = 1; lvl <= maxLevelId; lvl++) {
+            const lvlWordIds = loadedWords.filter((w) => w.levelId === lvl).map((w) => w.id);
+            if (lvlWordIds.length > 0) {
+              const rate = calculateMasteryRate(lvlWordIds, merged.wordStats);
+              if (rate >= 0.8 && lvl >= mergedUnlocked && lvl < maxLevelId) {
+                mergedUnlocked = lvl + 1;
+              }
+            }
+          }
+          const updated = { ...merged, unlockedLevel: mergedUnlocked };
+          saveLocalProfile(updated);
+          return updated;
         });
       }
     }).catch(() => {});
@@ -92,7 +120,9 @@ export function App() {
   }
 
   // 待複習單字計數
-  const dueCount = words.filter((w) => isWordDueForReview(userProfile.wordStats[w.id])).length;
+  const dueCount = userProfile && words
+    ? words.filter((w) => isWordDueForReview((userProfile.wordStats || {})[w.id])).length
+    : 0;
 
   // 學生切換座號登入 (零延遲同步更新)
   const handleStudentLogin = (seatNumber: string, classCode: string, themeColor: ThemeColor) => {
@@ -172,12 +202,13 @@ export function App() {
     };
 
     // 全關卡解鎖條件評估：只要任一關卡熟練度 >= 80%，自動解鎖下一關
+    const maxLevelId = Math.max(...words.map((w) => w.levelId || 1), 7);
     let nextUnlockedLevel = userProfile.unlockedLevel || 1;
-    for (let lvl = 1; lvl <= 6; lvl++) {
+    for (let lvl = 1; lvl <= maxLevelId; lvl++) {
       const lvlWordIds = words.filter((w) => w.levelId === lvl).map((w) => w.id);
       if (lvlWordIds.length > 0) {
         const rate = calculateMasteryRate(lvlWordIds, newWordStats);
-        if (rate >= 0.8 && lvl >= nextUnlockedLevel && lvl < 6) {
+        if (rate >= 0.8 && lvl >= nextUnlockedLevel && lvl < maxLevelId) {
           nextUnlockedLevel = lvl + 1;
         }
       }
@@ -242,6 +273,7 @@ export function App() {
         onSelectMode={(mode) => setCurrentMode(mode)}
         onOpenLogin={() => setIsLoginOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
+        onOpenMasterList={() => setIsMasterListOpen(true)}
         onUpdateTheme={handleUpdateTheme}
         speechRate={speechRate}
         onToggleSpeechRate={() => setSpeechRate((r) => (r === 1.0 ? 0.7 : 1.0))}
@@ -265,6 +297,7 @@ export function App() {
             onStartDueReview={handleStartDueReview}
             onOpenLogin={() => setIsLoginOpen(true)}
             onOpenGuide={() => setIsGuideOpen(true)}
+            onOpenMasterList={() => setIsMasterListOpen(true)}
           />
         )}
 
@@ -349,6 +382,14 @@ export function App() {
       <GuideModal
         isOpen={isGuideOpen}
         onClose={() => setIsGuideOpen(false)}
+      />
+
+      {/* Vocabulary Master List / Study Reference Sheet Modal */}
+      <VocabularyMasterListModal
+        words={words}
+        userProfile={userProfile}
+        isOpen={isMasterListOpen}
+        onClose={() => setIsMasterListOpen(false)}
       />
 
     </div>

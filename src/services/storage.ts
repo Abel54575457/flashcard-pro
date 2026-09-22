@@ -203,11 +203,27 @@ function updateStreakDays(profile: UserProfile): UserProfile {
 export function getCustomWords(): WordItem[] {
   if (typeof window === 'undefined') return INITIAL_WORDS;
   const raw = localStorage.getItem(CUSTOM_WORDS_KEY);
-  if (!raw) return INITIAL_WORDS;
+  if (!raw) {
+    saveCustomWords(INITIAL_WORDS);
+    return INITIAL_WORDS;
+  }
   try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_WORDS;
+    const parsed: WordItem[] = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      saveCustomWords(INITIAL_WORDS);
+      return INITIAL_WORDS;
+    }
+    // 自動無損合併預設最新單字庫，確保新增單字卡（如 9/16 新增）能在既有使用者裝置上出現
+    const wordMap = new Map<string, WordItem>();
+    INITIAL_WORDS.forEach((w) => wordMap.set(w.id, w));
+    parsed.forEach((w) => {
+      wordMap.set(w.id, { ...(wordMap.get(w.id) || {}), ...w });
+    });
+    const merged = Array.from(wordMap.values());
+    localStorage.setItem(CUSTOM_WORDS_KEY, JSON.stringify(merged));
+    return merged;
   } catch {
+    saveCustomWords(INITIAL_WORDS);
     return INITIAL_WORDS;
   }
 }

@@ -13,7 +13,8 @@ import {
   Brain,
   HelpCircle,
   Trophy,
-  Zap
+  Zap,
+  BookOpen
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -22,6 +23,7 @@ interface NavbarProps {
   onSelectMode: (mode: StudyMode) => void;
   onOpenLogin: () => void;
   onOpenGuide?: () => void;
+  onOpenMasterList?: () => void;
   onUpdateTheme: (color: ThemeColor) => void;
   speechRate: number;
   onToggleSpeechRate: () => void;
@@ -36,6 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectMode,
   onOpenLogin,
   onOpenGuide,
+  onOpenMasterList,
   speechRate,
   onToggleSpeechRate,
   soundEnabled,
@@ -82,6 +85,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Home className="w-3.5 h-3.5" />
                 <span>關卡</span>
               </button>
+
+              {onOpenMasterList && (
+                <button
+                  onClick={() => {
+                    soundSynth.playFlip();
+                    onOpenMasterList();
+                  }}
+                  className="px-3 py-1.5 rounded-xl transition-all flex items-center space-x-1.5 bg-amber-100/70 hover:bg-amber-200 text-amber-950 font-bold border border-amber-200"
+                  title="查看觀光英文全冊必學單字總表"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-amber-800" />
+                  <span>單字總表</span>
+                </button>
+              )}
 
               <button
                 onClick={() => onSelectMode('mistakes')}

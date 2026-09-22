@@ -29,6 +29,8 @@ interface LeaderboardProps {
 
 export interface StudentRankItem {
   seatNumber: string;
+  lineDisplayName?: string;
+  linePictureUrl?: string;
   stars: number;
   streakDays: number;
   unlockedLevel: number;
@@ -92,6 +94,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
         const mastery = calculateMasteryRate(allWordIds, merged.wordStats || {});
         list.push({
           seatNumber: seatStr,
+          lineDisplayName: merged.lineDisplayName,
+          linePictureUrl: merged.linePictureUrl,
           stars: merged.stars || 0,
           streakDays: merged.streakDays || 0,
           unlockedLevel: merged.unlockedLevel || 1,
@@ -390,8 +394,15 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                     </div>
 
                     <div className="flex items-center space-x-2">
+                      {st.linePictureUrl ? (
+                        <img
+                          src={st.linePictureUrl}
+                          alt={st.lineDisplayName || st.seatNumber}
+                          className="w-6 h-6 rounded-full border border-slate-200 object-cover shrink-0"
+                        />
+                      ) : null}
                       <div className="font-black text-slate-900 text-sm sm:text-base">
-                        座號 {st.seatNumber}
+                        座號 {st.seatNumber} {st.lineDisplayName ? `(${st.lineDisplayName})` : ''}
                       </div>
 
                       {st.isCurrentUser && (

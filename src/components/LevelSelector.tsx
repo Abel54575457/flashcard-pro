@@ -25,6 +25,7 @@ interface LevelSelectorProps {
   onStartDueReview: () => void;
   onOpenLogin: () => void;
   onOpenGuide?: () => void;
+  onOpenMasterList?: () => void;
 }
 
 export const LevelSelector: React.FC<LevelSelectorProps> = ({
@@ -35,6 +36,7 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
   onStartDueReview,
   onOpenLogin,
   onOpenGuide,
+  onOpenMasterList,
 }) => {
   // 動態抓取關卡編號 (如 1 ~ 6，甚至新匯入的 7, 8 關卡)
   const derivedLevelIds = Array.from(new Set(words.map((w) => w.levelId || 1))).sort((a, b) => a - b);
@@ -82,7 +84,7 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
             {/* Mastery Progress Bar */}
             <div className="pt-1 max-w-md space-y-1">
               <div className="flex justify-between text-xs font-medium text-stone-300">
-                <span>全站熟練度</span>
+                <span>全站熟練度 ({words.length} 單字)</span>
                 <span className="text-amber-400 font-bold">{Math.round(totalMasteryRate * 100)}%</span>
               </div>
               <div className="w-full bg-black/40 rounded-full h-1.5 overflow-hidden border border-white/10">
@@ -92,6 +94,22 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                 />
               </div>
             </div>
+
+            {/* Quick Action: Master List Button */}
+            {onOpenMasterList && (
+              <div className="pt-2">
+                <button
+                  onClick={() => {
+                    soundSynth.playFlip();
+                    onOpenMasterList();
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-extrabold text-xs shadow-md transition-all flex items-center space-x-2 active:scale-95"
+                >
+                  <BookOpen className="w-4 h-4 text-stone-950" />
+                  <span>📖 開啟全冊單字總表 (預習與對照)</span>
+                </button>
+              </div>
+            )}
 
           </div>
 
@@ -141,13 +159,28 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
               關卡地圖 (Unit 1 - {Math.max(...levels, 6)})
             </h2>
           </div>
+
+          {onOpenMasterList && (
+            <button
+              onClick={() => {
+                soundSynth.playFlip();
+                onOpenMasterList();
+              }}
+              className="text-xs font-extrabold text-amber-800 hover:text-amber-950 flex items-center space-x-1"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>查看全部單字總表 ➔</span>
+            </button>
+          )}
         </div>
 
         {/* Level Grid Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {levels.map((levelId) => {
-            const isUnlocked = levelId <= userProfile.unlockedLevel;
             const levelWords = words.filter((w) => w.levelId === levelId);
+            const prevLevelWords = words.filter((w) => w.levelId === levelId - 1).map((w) => w.id);
+            const prevMastery = prevLevelWords.length > 0 ? calculateMasteryRate(prevLevelWords, userProfile.wordStats) : 0;
+            const isUnlocked = levelId === 1 || levelId <= userProfile.unlockedLevel || prevMastery >= 0.8;
             const levelInfo = LEVEL_NAMES[levelId] || {
               title: `Unit ${levelId}: 自訂擴充關卡`,
               desc: `包含 ${levelWords.length} 個專業單字`,
