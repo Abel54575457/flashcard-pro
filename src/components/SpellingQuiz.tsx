@@ -157,7 +157,7 @@ export const SpellingQuiz: React.FC<SpellingQuizProps> = ({
           <span>點擊聽發音</span>
         </button>
 
-        <h2 className="text-4xl font-black text-yellow-300">
+        <h2 className={`${currentWord.translation.length > 14 ? 'text-2xl sm:text-3xl' : currentWord.translation.length > 7 ? 'text-3xl sm:text-4xl' : 'text-3xl sm:text-4xl md:text-5xl'} font-black text-yellow-300 break-words px-2`}>
           {currentWord.translation}
         </h2>
 
@@ -178,12 +178,18 @@ export const SpellingQuiz: React.FC<SpellingQuizProps> = ({
           已拼出的字母 (點擊可移出)
         </span>
 
-        <div className="flex flex-wrap justify-center gap-2 min-h-[64px] items-center p-3 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200">
+        <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 min-h-[56px] sm:min-h-[64px] items-center p-2.5 sm:p-3 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200">
           {selectedLetters.map((item) => (
             <button
               key={item.id}
               onClick={() => handleRemoveLetter(item)}
-              className="w-12 h-12 rounded-xl bg-purple-600 text-white font-black text-2xl shadow-md hover:bg-purple-700 transition-transform active:scale-95 flex items-center justify-center uppercase"
+              className={`${
+                currentWord.word.length > 20
+                  ? 'w-8 h-8 sm:w-9 sm:h-9 text-base rounded-lg'
+                  : currentWord.word.length > 12
+                  ? 'w-9 h-9 sm:w-11 sm:h-11 text-xl rounded-xl'
+                  : 'w-11 h-11 sm:w-12 sm:h-12 text-2xl rounded-xl'
+              } bg-purple-600 text-white font-black shadow-md hover:bg-purple-700 transition-transform active:scale-95 flex items-center justify-center uppercase`}
             >
               {item.char}
             </button>
@@ -230,12 +236,18 @@ export const SpellingQuiz: React.FC<SpellingQuizProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-3">
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
           {scrambledLetters.map((item) => (
             <button
               key={item.id}
               onClick={() => handlePickLetter(item)}
-              className="w-14 h-14 rounded-2xl bg-white border-2 border-slate-200 hover:border-purple-500 text-slate-900 font-black text-2xl shadow-sm hover:shadow-md transition-all active:scale-90 uppercase flex items-center justify-center"
+              className={`${
+                currentWord.word.length > 20
+                  ? 'w-9 h-9 sm:w-11 sm:h-11 text-lg rounded-xl'
+                  : currentWord.word.length > 12
+                  ? 'w-11 h-11 sm:w-12 sm:h-12 text-xl rounded-xl'
+                  : 'w-12 h-12 sm:w-14 sm:h-14 text-2xl rounded-2xl'
+              } bg-white border-2 border-slate-200 hover:border-purple-500 text-slate-900 font-black shadow-sm hover:shadow-md transition-all active:scale-90 uppercase flex items-center justify-center`}
             >
               {item.char}
             </button>

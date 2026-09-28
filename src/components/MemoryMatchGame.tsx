@@ -187,15 +187,23 @@ export const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({
 
       {/* Game Grid */}
       {!isGameOver ? (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
           {cards.map((card) => {
             const isVisible = card.isFlipped || card.isMatched;
+            const textLen = card.text.length;
+            const fontSizeClass =
+              textLen > 28
+                ? 'text-[10px] sm:text-xs leading-tight font-bold'
+                : textLen > 14
+                ? 'text-xs sm:text-sm leading-tight font-extrabold'
+                : 'text-sm sm:text-lg font-black';
+
             return (
               <button
                 key={card.uid}
                 onClick={() => handleCardClick(card)}
                 disabled={card.isMatched}
-                className={`h-28 sm:h-32 rounded-3xl font-black text-base sm:text-xl p-3 flex items-center justify-center text-center transition-all duration-300 transform active:scale-95 shadow-md border-2 ${
+                className={`h-28 sm:h-32 rounded-2xl sm:rounded-3xl p-2 sm:p-3 flex items-center justify-center text-center transition-all duration-300 transform active:scale-95 shadow-md border-2 overflow-hidden break-words ${
                   card.isMatched
                     ? 'bg-emerald-500 text-white border-emerald-500 opacity-60 cursor-default scale-95'
                     : isVisible
@@ -206,7 +214,7 @@ export const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({
                 }`}
               >
                 {isVisible ? (
-                  <span className="animate-in zoom-in-95">{card.text}</span>
+                  <span className={`animate-in zoom-in-95 line-clamp-4 ${fontSizeClass}`}>{card.text}</span>
                 ) : (
                   <span className="text-2xl opacity-40">❓</span>
                 )}
