@@ -10,7 +10,8 @@ import {
   ExternalLink,
   Sparkles,
   Zap,
-  Globe
+  Globe,
+  Monitor
 } from 'lucide-react';
 import { soundSynth } from '../services/soundEffects';
 
@@ -31,6 +32,7 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isInLine, setIsInLine] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
     // 檢測是否已處於獨立 App 模式 (Standalone)
@@ -44,8 +46,10 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
     // 檢測作業系統與瀏覽器環境
     const ua = navigator.userAgent.toLowerCase();
     const isIOSDevice = /iphone|ipad|ipod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isDesktopDevice = !/iphone|ipad|ipod|android|mobile/.test(ua);
     setIsIOS(isIOSDevice);
     setIsInLine(ua.includes('line'));
+    setIsDesktop(isDesktopDevice);
 
     // 監聽 Android / Chrome 的原生安裝事件
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -80,6 +84,20 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
       }
       setDeferredPrompt(null);
     }
+  };
+
+  const handleDownloadDesktopShortcut = () => {
+    soundSynth.playLevelClear();
+    const urlContent = `[InternetShortcut]\r\nURL=https://flashcard-pro-app-25c7f.web.app/\r\nIconIndex=0\r\nIconFile=https://flashcard-pro-app-25c7f.web.app/favicon.ico\r\n`;
+    const blob = new Blob([urlContent], { type: 'application/octet-stream' });
+    const downloadUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = 'FlashCard Pro 觀光單字卡.url';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(downloadUrl);
   };
 
   return (
@@ -247,8 +265,46 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
             </div>
           )}
 
-          {/* Case 5: Android Chrome Manual Fallback */}
-          {!isInstalled && !isIOS && !deferredPrompt && !isInLine && (
+          {/* Case 5: Desktop (Windows / Mac) Shortcut & App Install */}
+          {isDesktop && (
+            <div className="space-y-2.5 p-4 rounded-2xl bg-indigo-50/80 border border-indigo-200">
+              <div className="flex items-center space-x-2 text-indigo-900 font-extrabold text-xs">
+                <Monitor className="w-4 h-4 text-indigo-600" />
+                <span>🖥️ 電腦版 (Windows / Mac) 桌面圖示：</span>
+              </div>
+              <p className="text-xs text-indigo-800 leading-relaxed">
+                您可以直接下載電腦桌面捷徑檔案，或透過 Chrome / Edge 瀏覽器安裝為全螢幕獨立 App！
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleDownloadDesktopShortcut}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-sm flex items-center justify-center space-x-1.5 transition-all active:scale-95"
+                  title="下載 Windows 桌面捷徑檔至電腦"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>📥 下載 Windows 桌面捷徑 (.url)</span>
+                </button>
+
+                {deferredPrompt && (
+                  <button
+                    type="button"
+                    onClick={handleNativeInstall}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-sm flex items-center justify-center space-x-1.5 transition-all active:scale-95"
+                  >
+                    <PlusSquare className="w-4 h-4" />
+                    <span>🚀 安裝為 Chrome/Edge App</span>
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-indigo-700/90 font-medium">
+                💡 秘訣：在 Chrome / Edge 網址列最右端，也可點擊「安裝圖示 💻⬇️」一鍵將 App 釘選至 Windows 桌面！
+              </p>
+            </div>
+          )}
+
+          {/* Case 6: Android Chrome Manual Fallback */}
+          {!isInstalled && !isIOS && !isDesktop && !deferredPrompt && !isInLine && (
             <div className="space-y-2">
               <h5 className="text-xs font-black text-slate-800 flex items-center space-x-1.5">
                 <PlusSquare className="w-4 h-4 text-emerald-600" />
