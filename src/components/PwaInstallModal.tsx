@@ -132,15 +132,20 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
           <div className="flex items-center space-x-3.5 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
             <img
               src="/pwa-192x192.png"
-              alt="單字卡 Pro"
-              className="w-14 h-14 rounded-2xl shadow-md border border-slate-200 object-cover shrink-0"
+              alt="Hospitality 單字卡 Pro"
+              className="w-14 h-14 rounded-2xl shadow-md border border-amber-300/40 object-cover shrink-0"
             />
             <div className="space-y-0.5 flex-1 min-w-0">
-              <h4 className="font-black text-sm text-slate-900 truncate">
-                FlashCard Pro - 觀光單字卡
-              </h4>
+              <div className="flex items-center space-x-1.5">
+                <h4 className="font-black text-sm text-slate-900 truncate">
+                  FlashCard Pro
+                </h4>
+                <span className="px-1.5 py-0.5 text-[9px] font-black bg-emerald-600 text-white rounded-md tracking-wider uppercase">
+                  Hospitality
+                </span>
+              </div>
               <p className="text-xs text-slate-500 font-medium">
-                https://flashcard-pro-app-25c7f.web.app
+                觀光餐旅專業單字卡自主記憶系統
               </p>
               <div className="flex items-center space-x-2 pt-0.5">
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">

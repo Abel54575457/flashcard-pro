@@ -1,7 +1,7 @@
 {
-  "name": "FlashCard Pro 觀光單字卡",
-  "short_name": "單字卡 Pro",
-  "description": "專為觀光餐旅與國際行銷科系設計的專業單字卡自主學習闖關系統",
+  "name": "FlashCard Pro - 觀光餐旅 Hospitality 單字卡",
+  "short_name": "Hospitality 單字卡",
+  "description": "專為觀光餐旅 Hospitality 與國際行銷科系設計的專業單字卡自主學習闖關系統",
   "start_url": "/",
   "id": "/",
   "scope": "/",

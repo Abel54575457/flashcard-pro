@@ -62,15 +62,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
               className="flex items-center space-x-2.5 text-left group focus:outline-none"
             >
-              <div className="w-9 h-9 rounded-xl bg-stone-900 text-amber-200 flex items-center justify-center shadow-xs transition-transform group-hover:scale-105">
-                <Sparkles className="w-4 h-4" />
-              </div>
+              <img
+                src="/pwa-192x192.png"
+                alt="Hospitality"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-md border border-amber-400/40 object-cover transition-transform group-hover:scale-105 shrink-0"
+              />
               <div>
-                <span className="font-bold text-base sm:text-lg tracking-tight text-stone-900">
-                  FlashCard <span className="text-amber-700 font-semibold">Pro</span>
-                </span>
-                <span className="text-[10px] text-stone-600 font-medium block leading-none">
-                  205 班
+                <div className="flex items-center space-x-1.5">
+                  <span className="font-black text-base sm:text-lg tracking-tight text-stone-900">
+                    FlashCard <span className="text-amber-700 font-extrabold">Pro</span>
+                  </span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-black bg-emerald-600 text-white rounded-md tracking-wider uppercase shadow-xs">
+                    Hospitality
+                  </span>
+                </div>
+                <span className="text-[10px] text-stone-600 font-bold block leading-none pt-0.5">
+                  205 班・觀光餐旅專業記憶
                 </span>
               </div>
             </button>
