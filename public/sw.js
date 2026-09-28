@@ -1,10 +1,11 @@
 // FlashCard Pro - Progressive Web App Service Worker (PWA)
-const CACHE_NAME = 'flashcard-pro-v1.0.1';
+const CACHE_NAME = 'flashcard-pro-v1.0.2';
 
 // 核心靜態離線快取資源清單
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
+  '/manifest.json',
   '/manifest.webmanifest',
   '/favicon.svg',
   '/pwa-192x192.png',

@@ -11,7 +11,7 @@ import {
   Sparkles,
   Zap,
   Globe,
-  Monitor
+  Info
 } from 'lucide-react';
 import { soundSynth } from '../services/soundEffects';
 
@@ -28,7 +28,7 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
   userSeatNumber,
   lineBound
 }) => {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>((window as any).deferredPwaPrompt || null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isInLine, setIsInLine] = useState(false);
@@ -51,53 +51,48 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
     setIsInLine(ua.includes('line'));
     setIsDesktop(isDesktopDevice);
 
-    // 監聽 Android / Chrome 的原生安裝事件
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
+    // 取得全域捕捉到的 PWA 安裝事件
+    if ((window as any).deferredPwaPrompt) {
+      setDeferredPrompt((window as any).deferredPwaPrompt);
+    }
+
+    const handlePromptAvailable = (e: any) => {
+      setDeferredPrompt(e.detail || (window as any).deferredPwaPrompt);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    window.addEventListener('appinstalled', () => {
+    const handleInstalled = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
       soundSynth.playLevelClear();
-    });
+    };
+
+    window.addEventListener('pwa-prompt-available', handlePromptAvailable);
+    window.addEventListener('pwa-installed', handleInstalled);
+    window.addEventListener('appinstalled', handleInstalled);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('pwa-prompt-available', handlePromptAvailable);
+      window.removeEventListener('pwa-installed', handleInstalled);
+      window.removeEventListener('appinstalled', handleInstalled);
     };
-  }, []);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleNativeInstall = async () => {
-    if (deferredPrompt) {
+    const promptObj = deferredPrompt || (window as any).deferredPwaPrompt;
+    if (promptObj) {
       soundSynth.playFlip();
-      deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
+      promptObj.prompt();
+      const choice = await promptObj.userChoice;
       if (choice.outcome === 'accepted') {
         soundSynth.playLevelClear();
         setIsInstalled(true);
+        (window as any).deferredPwaPrompt = null;
+        setDeferredPrompt(null);
         onClose();
       }
-      setDeferredPrompt(null);
     }
-  };
-
-  const handleDownloadDesktopShortcut = () => {
-    soundSynth.playLevelClear();
-    const urlContent = `[InternetShortcut]\r\nURL=https://flashcard-pro-app-25c7f.web.app/\r\nIconIndex=0\r\nIconFile=https://flashcard-pro-app-25c7f.web.app/favicon.ico\r\n`;
-    const blob = new Blob([urlContent], { type: 'application/octet-stream' });
-    const downloadUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = 'FlashCard Pro 觀光單字卡.url';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(downloadUrl);
   };
 
   return (
@@ -112,14 +107,14 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="text-base sm:text-lg font-black tracking-tight">
-                  📲 下載至手機桌面 (PWA)
+                  📲 加到手機主畫面 (App)
                 </h3>
                 <span className="px-2 py-0.5 text-[10px] font-extrabold bg-white/20 rounded-full tracking-wide">
-                  原生 App 體驗
+                  原生體驗
                 </span>
               </div>
               <p className="text-xs text-emerald-100/90 font-medium">
-                免去應用商店繁瑣安裝，1秒捷徑直達全螢幕背單字！
+                桌面圖示一鍵秒開，無網址列遮擋，全螢幕背單字！
               </p>
             </div>
           </div>
@@ -158,7 +153,7 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
             </div>
           </div>
 
-          {/* Three Key Assurances */}
+          {/* Two Key Assurances */}
           <div className="grid grid-cols-1 gap-2">
             <div className="flex items-start space-x-2.5 p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-100 text-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
@@ -193,118 +188,102 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
           {isInstalled && (
             <div className="p-4 rounded-2xl bg-emerald-100/80 border border-emerald-300 text-emerald-900 text-center space-y-1">
               <CheckCircle2 className="w-6 h-6 text-emerald-700 mx-auto" />
-              <p className="font-black text-sm">🎉 您已成功安裝單字卡 Pro 至本裝置！</p>
+              <p className="font-black text-sm">🎉 您已成功安裝單字卡至本裝置主畫面！</p>
               <p className="text-xs text-emerald-800">
                 可隨時自手機桌面點擊圖示直接打開學習。
               </p>
             </div>
           )}
 
-          {/* Case 2: In LINE In-App Browser */}
+          {/* Case 2: In LINE In-App Browser (Crucial!) */}
           {isInLine && (
-            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-2">
-              <p className="font-extrabold text-xs flex items-center space-x-1.5 text-amber-800">
-                <Globe className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>偵測到您目前在 LINE 聊天室內開啟：</span>
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 space-y-3">
+              <div className="flex items-center space-x-2">
+                <Globe className="w-5 h-5 text-amber-600 shrink-0" />
+                <h5 className="font-black text-xs sm:text-sm text-amber-900">
+                  ⚠️ 偵測到您目前在 LINE 聊天室內開啟
+                </h5>
+              </div>
+              <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                LINE 內建瀏覽器受系統安全限制，無法直接建立桌面圖示。請點擊下方按鈕以手機預設瀏覽器（Safari 或 Chrome）開啟，即可輕鬆加到桌面：
               </p>
-              <ol className="list-decimal list-inside text-xs space-y-1 text-amber-800 font-medium">
-                <li>點擊右上角「<strong>⋮</strong>」或分享圖示。</li>
-                <li>點選「<strong>以預設瀏覽器開啟</strong>」(Safari 或 Chrome)。</li>
-                <li>依照瀏覽器提示即可輕鬆將單字卡一鍵釘選至手機桌面！</li>
-              </ol>
+
+              <a
+                href="https://flashcard-pro-app-25c7f.web.app/?openExternalBrowser=1"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 rounded-xl bg-[#06C755] hover:bg-[#05b34c] text-white font-black text-xs sm:text-sm shadow-md shadow-[#06C755]/25 flex items-center justify-center space-x-2 transition-all active:scale-95 text-center"
+              >
+                <ExternalLink className="w-4 h-4 shrink-0" />
+                <span>🚀 點此跳出 LINE（以手機瀏覽器開啟）</span>
+              </a>
+
+              <div className="text-[11px] text-amber-800/90 bg-amber-100/70 p-2.5 rounded-lg space-y-1 font-medium">
+                <p className="font-bold">也可以手動切換：</p>
+                <p>1. 點擊 LINE 右上角「<strong>⋮</strong>」或分享按鈕</p>
+                <p>2. 選擇「<strong>以預設瀏覽器開啟</strong>」</p>
+              </div>
             </div>
           )}
 
-          {/* Case 3: Android / Chrome Native Install Prompt */}
-          {!isInstalled && deferredPrompt && (
+          {/* Case 3: Android Native Install Button (when prompt is available) */}
+          {!isInstalled && !isIOS && !isInLine && (deferredPrompt || (window as any).deferredPwaPrompt) && (
             <div className="space-y-2">
               <button
                 type="button"
                 onClick={handleNativeInstall}
-                className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 transition-all active:scale-98"
+                className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 transition-all active:scale-95 animate-pulse"
               >
                 <Download className="w-5 h-5" />
-                <span>立即一鍵加到手機主畫面</span>
+                <span>📲 立即一鍵加到手機主畫面</span>
               </button>
+              <p className="text-[11px] text-center text-slate-500 font-medium">
+                點擊後系統將跳出安裝確認，點選「新增」即可在手機桌面看到圖示
+              </p>
             </div>
           )}
 
           {/* Case 4: iOS Safari Step-by-Step Guide */}
           {!isInstalled && isIOS && !isInLine && (
-            <div className="space-y-2">
-              <h5 className="text-xs font-black text-slate-800 flex items-center space-x-1.5">
-                <Share2 className="w-4 h-4 text-indigo-600" />
+            <div className="space-y-2.5">
+              <div className="flex items-center space-x-1.5 text-indigo-900 font-black text-xs sm:text-sm">
+                <Share2 className="w-4 h-4 text-indigo-600 shrink-0" />
                 <span>iPhone / iPad (Safari) 安裝 3 步驟：</span>
-              </h5>
+              </div>
               <div className="space-y-2 text-xs text-slate-700 font-semibold bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                <div className="flex items-center space-x-2.5">
-                  <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                <div className="flex items-start space-x-2.5">
+                  <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
                     1
                   </span>
                   <span>
-                    點擊 Safari 下方工具列的「<strong>分享</strong>」按鈕 📤 (向上箭頭圖示)
+                    點擊 Safari 底部工具列中央的「<strong>分享</strong>」按鈕 📤 (向上箭頭圖示)
                   </span>
                 </div>
-                <div className="flex items-center space-x-2.5">
-                  <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                <div className="flex items-start space-x-2.5">
+                  <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
                     2
                   </span>
                   <span>
-                    在選單中往下滑動，點擊「<strong>加入主畫面 ➕</strong>」
+                    在選單中往下滑動，點選「<strong>加入主畫面 ➕</strong>」
                   </span>
                 </div>
-                <div className="flex items-center space-x-2.5">
-                  <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                <div className="flex items-start space-x-2.5">
+                  <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
                     3
                   </span>
                   <span>
-                    點擊右上角的「<strong>新增</strong>」，手機桌面就會出現專屬圖示！
+                    點擊右上角的「<strong>新增</strong>」，手機桌面立即出現「觀光單字卡」專屬圖示！
                   </span>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Case 5: Desktop (Windows / Mac) Shortcut & App Install */}
-          {isDesktop && (
-            <div className="space-y-2.5 p-4 rounded-2xl bg-indigo-50/80 border border-indigo-200">
-              <div className="flex items-center space-x-2 text-indigo-900 font-extrabold text-xs">
-                <Monitor className="w-4 h-4 text-indigo-600" />
-                <span>🖥️ 電腦版 (Windows / Mac) 桌面圖示：</span>
-              </div>
-              <p className="text-xs text-indigo-800 leading-relaxed">
-                您可以直接下載電腦桌面捷徑檔案，或透過 Chrome / Edge 瀏覽器安裝為全螢幕獨立 App！
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={handleDownloadDesktopShortcut}
-                  className="flex-1 py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-sm flex items-center justify-center space-x-1.5 transition-all active:scale-95"
-                  title="下載 Windows 桌面捷徑檔至電腦"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>📥 下載 Windows 桌面捷徑 (.url)</span>
-                </button>
-
-                {deferredPrompt && (
-                  <button
-                    type="button"
-                    onClick={handleNativeInstall}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-sm flex items-center justify-center space-x-1.5 transition-all active:scale-95"
-                  >
-                    <PlusSquare className="w-4 h-4" />
-                    <span>🚀 安裝為 Chrome/Edge App</span>
-                  </button>
-                )}
-              </div>
-              <p className="text-[11px] text-indigo-700/90 font-medium">
-                💡 秘訣：在 Chrome / Edge 網址列最右端，也可點擊「安裝圖示 💻⬇️」一鍵將 App 釘選至 Windows 桌面！
+              <p className="text-[11px] text-slate-500 font-medium text-center">
+                💡 註：Apple iOS 規定網頁需透過上述分享選單加入主畫面
               </p>
             </div>
           )}
 
-          {/* Case 6: Android Chrome Manual Fallback */}
-          {!isInstalled && !isIOS && !isDesktop && !deferredPrompt && !isInLine && (
+          {/* Case 5: Android Chrome Manual Steps (if prompt not yet triggered) */}
+          {!isInstalled && !isIOS && !isDesktop && !isInLine && !(deferredPrompt || (window as any).deferredPwaPrompt) && (
             <div className="space-y-2">
               <h5 className="text-xs font-black text-slate-800 flex items-center space-x-1.5">
                 <PlusSquare className="w-4 h-4 text-emerald-600" />
@@ -312,9 +291,23 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
               </h5>
               <div className="space-y-2 text-xs text-slate-700 font-semibold bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                 <p>
-                  點擊瀏覽器右上角選單「<strong>⋮</strong>」➔ 選擇「<strong>安裝應用程式</strong>」或「<strong>加到主畫面</strong>」，即可完成下載。
+                  1. 點擊 Chrome 右上角選單「<strong>⋮</strong>」
+                </p>
+                <p>
+                  2. 點選「<strong>加到主畫面</strong>」或「<strong>安裝應用程式</strong>」
+                </p>
+                <p>
+                  3. 點選「<strong>新增</strong>」，手機桌面即會產生專屬圖示！
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Case 6: Desktop PC Info */}
+          {isDesktop && !isInLine && (
+            <div className="p-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs flex items-center space-x-2">
+              <Info className="w-4 h-4 text-slate-500 shrink-0" />
+              <span>📱 本功能專為學生手機端設計。請用手機開啟本網頁，即可一鍵加入手機桌面！</span>
             </div>
           )}
         </div>
