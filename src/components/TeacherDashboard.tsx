@@ -18,6 +18,7 @@ import {
   checkLineBotConnection,
   sendLineBatchReminders
 } from '../services/liff';
+import { PushReminderModal } from './PushReminderModal';
 import {
   GraduationCap,
   Users,
@@ -126,7 +127,19 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     soundSynth.playCorrect();
   };
 
-  const handleSendReminders = async () => {
+  // 推播提醒預覽與自訂彈窗狀態
+  const [reminderModalState, setReminderModalState] = useState<{
+    isOpen: boolean;
+    mode: 'batch' | 'single' | 'class_group';
+    targetStudent?: UserProfile | null;
+  }>({
+    isOpen: false,
+    mode: 'batch',
+    targetStudent: null
+  });
+
+  // 開啟全班推播彈窗
+  const handleOpenBatchReminderModal = () => {
     const token = channelTokenInput.trim() || getSavedChannelToken();
     if (!token) {
       alert('請先至「Firebase 雲端設定」填寫並儲存 LINE Channel Access Token，才能推播提醒卡片！');
@@ -141,6 +154,37 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       return;
     }
 
+    setReminderModalState({
+      isOpen: true,
+      mode: 'batch',
+      targetStudent: null
+    });
+  };
+
+  // 開啟個人推播彈窗
+  const handleOpenSingleReminderModal = (st: UserProfile) => {
+    setReminderModalState({
+      isOpen: true,
+      mode: 'single',
+      targetStudent: st
+    });
+  };
+
+  // 開啟班群公告彈窗
+  const handleOpenClassGroupReminderModal = () => {
+    setReminderModalState({
+      isOpen: true,
+      mode: 'class_group',
+      targetStudent: null
+    });
+  };
+
+  // 確認全班批次推播
+  const handleConfirmBatchSend = async (customMessage: string, customTitle: string) => {
+    const token = channelTokenInput.trim() || getSavedChannelToken();
+    const boundStudents = students.filter((s) => !!s.lineUserId);
+    if (boundStudents.length === 0) return;
+
     setIsSendingReminders(true);
     setReminderStatusMsg(`⏳ 正在為 ${boundStudents.length} 位已綁定學生推播提醒...`);
 
@@ -148,12 +192,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     const gasUrl = gasProxyInput.trim() || getSavedGasProxyUrl().trim();
     if (gasUrl) {
       try {
-        const batchRes = await sendLineBatchReminders(token, gasUrl, boundStudents, words);
+        const batchRes = await sendLineBatchReminders(token, gasUrl, boundStudents, words, customMessage, customTitle);
         if (batchRes.success && batchRes.sentCount > 0) {
           setIsSendingReminders(false);
           soundSynth.playLevelClear();
           const note = batchRes.failCount > 0 ? ` (另有 ${batchRes.failCount} 位發送失敗)` : '';
           setReminderStatusMsg(`🎉 成功發送 LINE 個人化課後學習提醒卡片給 ${batchRes.sentCount} 位已綁定學生！${note}`);
+          setReminderModalState((prev) => ({ ...prev, isOpen: false }));
           return;
         } else if (batchRes.reason && (batchRes.reason.includes('401') || batchRes.reason.includes('Token'))) {
           setIsSendingReminders(false);
@@ -179,7 +224,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           st.lineDisplayName || `座號 ${st.seatNumber}`,
           st.seatNumber,
           dueCount,
-          st.streakDays || 1
+          st.streakDays || 1,
+          customMessage,
+          customTitle
         );
       })
     );
@@ -198,12 +245,60 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     if (sentCount > 0) {
       soundSynth.playLevelClear();
       setReminderStatusMsg(`🎉 成功發送 LINE 個人化課後學習提醒卡片給 ${sentCount} 位已綁定學生！`);
+      setReminderModalState((prev) => ({ ...prev, isOpen: false }));
     } else {
       soundSynth.playWrong();
       setReminderStatusMsg(
         `❌ 發送未成功。原因：${lastReason || '伺服器無回應'}\n\n💡 建議操作：\n1. 👉 點擊下方學生名單右側的「💬 私訊提醒」可直接 1 對 1 傳送！\n2. 📢 點擊上方「分享公告到 205 班群」一鍵發布全班大卡片。\n3. 請至「Firebase 雲端設定」點擊「🔍 立即測試 Token 狀態」檢查 Token 是否過期。`
       );
     }
+  };
+
+  // 確認單一學生官方 Bot 推播
+  const handleConfirmSinglePush = async (student: UserProfile, customMessage: string, customTitle: string) => {
+    const token = channelTokenInput.trim() || getSavedChannelToken();
+    if (!token || !student.lineUserId) return;
+    setIsSendingReminders(true);
+    const dueCount = words.filter((w) => isWordDueForReview(student.wordStats?.[w.id])).length;
+    const res = await sendLinePushReminder(
+      token,
+      student.lineUserId,
+      student.lineDisplayName || `座號 ${student.seatNumber}`,
+      student.seatNumber,
+      dueCount,
+      student.streakDays || 1,
+      customMessage,
+      customTitle
+    );
+    setIsSendingReminders(false);
+    if (res.success) {
+      soundSynth.playLevelClear();
+      setReminderStatusMsg(`🎉 成功推播 LINE 學習提醒卡片給座號 ${student.seatNumber} (${student.lineDisplayName || '學生'})！`);
+      setReminderModalState((prev) => ({ ...prev, isOpen: false }));
+    } else {
+      soundSynth.playWrong();
+      alert(`推播失敗：${res.reason || '伺服器無回應'}`);
+    }
+  };
+
+  // 確認單一學生開啟 LINE 1對1 私訊
+  const handleConfirmSingleShare = (student: UserProfile, customMessage: string, customTitle: string) => {
+    const dueCount = words.filter((w) => isWordDueForReview(student.wordStats?.[w.id])).length;
+    shareIndividualStudentReminder(
+      student.lineDisplayName || `座號 ${student.seatNumber}`,
+      student.seatNumber,
+      dueCount,
+      customMessage,
+      customTitle
+    );
+    setReminderModalState((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  // 確認班群公告發布
+  const handleConfirmClassShare = async (customMessage: string, customTitle: string) => {
+    const ok = await shareReminderViaLiffPicker(customMessage, customTitle);
+    if (ok) soundSynth.playLevelClear();
+    setReminderModalState((prev) => ({ ...prev, isOpen: false }));
   };
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -530,20 +625,17 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             <h2 className="text-lg font-black text-slate-900">班級各座號學習排行榜</h2>
             <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={handleSendReminders}
+                onClick={handleOpenBatchReminderModal}
                 disabled={isSendingReminders}
                 className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-xs shadow-sm flex items-center space-x-1.5 transition-all"
-                title="精準 1 對 1 私訊推播給已綁定座號的學生個人，班群裡的其他老師完全不會收到！"
+                title="預覽並自訂內容後，精準 1 對 1 私訊推播給已綁定座號的學生個人！"
               >
                 <span>🔒 1對1 私訊推播 (僅已綁定學生)</span>
               </button>
               <button
-                onClick={async () => {
-                  const ok = await shareReminderViaLiffPicker();
-                  if (ok) soundSynth.playLevelClear();
-                }}
+                onClick={handleOpenClassGroupReminderModal}
                 className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-sm flex items-center space-x-1.5 transition-all"
-                title="分享提醒大公告到 205 班級 LINE 群組"
+                title="預覽並自訂內容後，分享提醒大公告到 205 班級 LINE 群組"
               >
                 <span>📢 分享公告到 205 班群</span>
               </button>
@@ -632,11 +724,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                       </td>
                       <td className="py-3 px-4 text-center">
                         <button
-                          onClick={() => {
-                            shareIndividualStudentReminder(st.lineDisplayName || `座號 ${st.seatNumber}`, st.seatNumber, dueCount);
-                          }}
+                          onClick={() => handleOpenSingleReminderModal(st)}
                           className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-all inline-flex items-center space-x-1"
-                          title={`開啟 LINE 一對一私訊座號 ${st.seatNumber}`}
+                          title={`預覽並自訂內容後，一對一私訊座號 ${st.seatNumber}`}
                         >
                           <span>💬 私訊提醒</span>
                         </button>
@@ -1065,6 +1155,8 @@ function handleRequest(params) {
   // 2. 全班批次推播模式 (action=batch，2秒雲端並行極速推播)
   if (action === 'batch') {
     var rawData = params.data || params.students || '[]';
+    var batchCustomMsg = params.msg ? decodeURIComponent(params.msg) : '';
+    var batchCustomTitle = params.title ? decodeURIComponent(params.title) : '';
     var students = [];
     try {
       students = (typeof rawData === 'string') ? JSON.parse(rawData) : rawData;
@@ -1084,8 +1176,10 @@ function handleRequest(params) {
       var seat = s.seat || s.s || '';
       var due = parseInt(s.due || s.d || '0');
       var streak = parseInt(s.streak || s.k || '1');
+      var itemMsg = s.msg ? decodeURIComponent(s.msg) : batchCustomMsg;
+      var itemTitle = s.title ? decodeURIComponent(s.title) : batchCustomTitle;
 
-      var pushRes = doPushOne(token, to, name, seat, due, streak, liffUrl);
+      var pushRes = doPushOne(token, to, name, seat, due, streak, liffUrl, itemMsg, itemTitle);
       if (pushRes.success) {
         sentCount++;
       } else {
@@ -1112,19 +1206,49 @@ function handleRequest(params) {
   var seat = params.seat || '';
   var due = parseInt(params.due || '0');
   var streak = parseInt(params.streak || '1');
+  var singleCustomMsg = params.msg ? decodeURIComponent(params.msg) : '';
+  var singleCustomTitle = params.title ? decodeURIComponent(params.title) : '';
 
-  var singleRes = doPushOne(token, to, name, seat, due, streak, liffUrl);
+  var singleRes = doPushOne(token, to, name, seat, due, streak, liffUrl, singleCustomMsg, singleCustomTitle);
   return jsonResponse(singleRes, callback);
 }
 
-function doPushOne(token, to, name, seat, due, streak, liffUrl) {
+function doPushOne(token, to, name, seat, due, streak, liffUrl, customMsg, customTitle) {
   var isDue = due > 0;
+  var title = (customTitle && customTitle.trim().length > 0) ? customTitle.trim() : '📢 課後單字學習提醒';
   var altText = isDue
     ? ('課後單字複習提醒：座號 ' + seat + ' 有 ' + due + ' 個單字待複習！')
     : ('課後學習提醒：觀光英文單字卡已上線！');
   var bodyText = isDue
     ? (name + ' 今日有 ' + due + ' 個單字進入記憶曲線複習池，黃金時間快來複習！')
     : (name + ' 保持每日學習好習慣！觀光餐旅單字新關卡已準備就緒，點擊開始挑戰！');
+
+  var bodyContents = [
+    { type: 'text', text: bodyText, wrap: true, size: 'sm', color: '#333333' }
+  ];
+
+  if (customMsg && customMsg.trim && customMsg.trim().length > 0) {
+    bodyContents.push({
+      type: 'box',
+      layout: 'vertical',
+      margin: 'md',
+      paddingAll: 'sm',
+      backgroundColor: '#F0FDF4',
+      cornerRadius: 'md',
+      contents: [
+        { type: 'text', text: '💡 老師叮嚀：', weight: 'bold', size: 'xs', color: '#15803D' },
+        { type: 'text', text: customMsg.trim(), wrap: true, size: 'xs', color: '#166534', margin: 'xs' }
+      ]
+    });
+  }
+
+  bodyContents.push({
+    type: 'text',
+    text: '🔥 連續學習天數：' + streak + ' 天',
+    size: 'xs',
+    color: '#888888',
+    margin: 'md'
+  });
 
   var messages = [{
     type: 'flex',
@@ -1134,16 +1258,13 @@ function doPushOne(token, to, name, seat, due, streak, liffUrl) {
       header: {
         type: 'box', layout: 'vertical', backgroundColor: '#06C755',
         contents: [
-          { type: 'text', text: '📢 課後單字學習提醒', weight: 'bold', color: '#FFFFFF', size: 'xs' },
+          { type: 'text', text: title, weight: 'bold', color: '#FFFFFF', size: 'xs' },
           { type: 'text', text: name + ' (座號 ' + seat + ')', weight: 'bold', color: '#FFFFFF', size: 'xl', margin: 'sm' }
         ]
       },
       body: {
         type: 'box', layout: 'vertical',
-        contents: [
-          { type: 'text', text: bodyText, wrap: true, size: 'sm', color: '#333333' },
-          { type: 'text', text: '🔥 連續學習天數：' + streak + ' 天', size: 'xs', color: '#888888', margin: 'md' }
-        ]
+        contents: bodyContents
       },
       footer: {
         type: 'box', layout: 'vertical',
@@ -1344,6 +1465,21 @@ function jsonResponse(obj, callback) {
           </div>
         </div>
       )}
+
+      {/* 推播提醒預覽與自訂修改對話框 */}
+      <PushReminderModal
+        isOpen={reminderModalState.isOpen}
+        onClose={() => setReminderModalState((prev) => ({ ...prev, isOpen: false }))}
+        mode={reminderModalState.mode}
+        targetStudent={reminderModalState.targetStudent}
+        boundStudents={students.filter((s) => !!s.lineUserId)}
+        words={words}
+        onConfirmBatchSend={handleConfirmBatchSend}
+        onConfirmSinglePush={handleConfirmSinglePush}
+        onConfirmSingleShare={handleConfirmSingleShare}
+        onConfirmClassShare={handleConfirmClassShare}
+        isSending={isSendingReminders}
+      />
 
     </div>
   );

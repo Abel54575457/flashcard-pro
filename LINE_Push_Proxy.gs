@@ -66,6 +66,8 @@ function handleRequest(params) {
   // 2. 全班批次推播模式 (action=batch)
   if (action === 'batch') {
     var rawData = params.data || params.students || '[]';
+    var batchCustomMsg = params.msg ? decodeURIComponent(params.msg) : '';
+    var batchCustomTitle = params.title ? decodeURIComponent(params.title) : '';
     var students = [];
     try {
       students = (typeof rawData === 'string') ? JSON.parse(rawData) : rawData;
@@ -85,8 +87,10 @@ function handleRequest(params) {
       var seat = s.seat || s.s || '';
       var due = parseInt(s.due || s.d || '0');
       var streak = parseInt(s.streak || s.k || '1');
+      var itemMsg = s.msg ? decodeURIComponent(s.msg) : batchCustomMsg;
+      var itemTitle = s.title ? decodeURIComponent(s.title) : batchCustomTitle;
 
-      var pushRes = doPushOne(token, to, name, seat, due, streak, liffUrl);
+      var pushRes = doPushOne(token, to, name, seat, due, streak, liffUrl, itemMsg, itemTitle);
       if (pushRes.success) {
         sentCount++;
       } else {
@@ -113,19 +117,49 @@ function handleRequest(params) {
   var seat = params.seat || '';
   var due = parseInt(params.due || '0');
   var streak = parseInt(params.streak || '1');
+  var singleCustomMsg = params.msg ? decodeURIComponent(params.msg) : '';
+  var singleCustomTitle = params.title ? decodeURIComponent(params.title) : '';
 
-  var singleRes = doPushOne(token, to, name, seat, due, streak, liffUrl);
+  var singleRes = doPushOne(token, to, name, seat, due, streak, liffUrl, singleCustomMsg, singleCustomTitle);
   return jsonResponse(singleRes, callback);
 }
 
-function doPushOne(token, to, name, seat, due, streak, liffUrl) {
+function doPushOne(token, to, name, seat, due, streak, liffUrl, customMsg, customTitle) {
   var isDue = due > 0;
+  var title = (customTitle && customTitle.trim().length > 0) ? customTitle.trim() : '📢 課後單字學習提醒';
   var altText = isDue
     ? ('課後單字複習提醒：座號 ' + seat + ' 有 ' + due + ' 個單字待複習！')
     : ('課後學習提醒：觀光英文單字卡已上線！');
   var bodyText = isDue
     ? (name + ' 今日有 ' + due + ' 個單字進入記憶曲線複習池，黃金時間快來複習！')
     : (name + ' 保持每日學習好習慣！觀光餐旅單字新關卡已準備就緒，點擊開始挑戰！');
+
+  var bodyContents = [
+    { type: 'text', text: bodyText, wrap: true, size: 'sm', color: '#333333' }
+  ];
+
+  if (customMsg && customMsg.trim && customMsg.trim().length > 0) {
+    bodyContents.push({
+      type: 'box',
+      layout: 'vertical',
+      margin: 'md',
+      paddingAll: 'sm',
+      backgroundColor: '#F0FDF4',
+      cornerRadius: 'md',
+      contents: [
+        { type: 'text', text: '💡 老師叮嚀：', weight: 'bold', size: 'xs', color: '#15803D' },
+        { type: 'text', text: customMsg.trim(), wrap: true, size: 'xs', color: '#166534', margin: 'xs' }
+      ]
+    });
+  }
+
+  bodyContents.push({
+    type: 'text',
+    text: '🔥 連續學習天數：' + streak + ' 天',
+    size: 'xs',
+    color: '#888888',
+    margin: 'md'
+  });
 
   var messages = [{
     type: 'flex',
@@ -135,16 +169,13 @@ function doPushOne(token, to, name, seat, due, streak, liffUrl) {
       header: {
         type: 'box', layout: 'vertical', backgroundColor: '#06C755',
         contents: [
-          { type: 'text', text: '📢 課後單字學習提醒', weight: 'bold', color: '#FFFFFF', size: 'xs' },
+          { type: 'text', text: title, weight: 'bold', color: '#FFFFFF', size: 'xs' },
           { type: 'text', text: name + ' (座號 ' + seat + ')', weight: 'bold', color: '#FFFFFF', size: 'xl', margin: 'sm' }
         ]
       },
       body: {
         type: 'box', layout: 'vertical',
-        contents: [
-          { type: 'text', text: bodyText, wrap: true, size: 'sm', color: '#333333' },
-          { type: 'text', text: '🔥 連續學習天數：' + streak + ' 天', size: 'xs', color: '#888888', margin: 'md' }
-        ]
+        contents: bodyContents
       },
       footer: {
         type: 'box', layout: 'vertical',

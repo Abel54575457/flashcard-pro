@@ -197,7 +197,9 @@ export async function sendLineBatchReminders(
   channelToken: string,
   gasUrl: string,
   students: { lineUserId?: string; lineDisplayName?: string; seatNumber: string; streakDays?: number; wordStats?: any }[],
-  words: any[]
+  words: any[],
+  customMessage?: string,
+  customTitle?: string
 ): Promise<BatchPushResult> {
   const bound = students.filter((s) => !!s.lineUserId);
   if (bound.length === 0) {
@@ -220,7 +222,9 @@ export async function sendLineBatchReminders(
       name: encodeURIComponent(st.lineDisplayName || `座號 ${st.seatNumber}`),
       seat: st.seatNumber,
       due: dueCount,
-      streak: st.streakDays || 1
+      streak: st.streakDays || 1,
+      msg: customMessage ? encodeURIComponent(customMessage.trim()) : undefined,
+      title: customTitle ? encodeURIComponent(customTitle.trim()) : undefined
     };
   });
 
@@ -232,7 +236,8 @@ export async function sendLineBatchReminders(
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 秒上限，留足冷啟動時間
-    const url = `${cleanGas}?action=batch&liff=${encodeURIComponent(getSavedLiffId())}&tk=${encodeURIComponent(channelToken)}&data=${encodeURIComponent(JSON.stringify(payload))}`;
+    const customParams = `${customMessage ? `&msg=${encodeURIComponent(customMessage.trim())}` : ''}${customTitle ? `&title=${encodeURIComponent(customTitle.trim())}` : ''}`;
+    const url = `${cleanGas}?action=batch&liff=${encodeURIComponent(getSavedLiffId())}&tk=${encodeURIComponent(channelToken)}&data=${encodeURIComponent(JSON.stringify(payload))}${customParams}`;
     const res = await fetch(url, { method: 'GET', signal: controller.signal });
     clearTimeout(timeoutId);
 
@@ -289,18 +294,48 @@ export async function sendLinePushReminder(
   studentName: string,
   seatNumber: string,
   dueCount: number,
-  streakDays: number
+  streakDays: number,
+  customMessage?: string,
+  customTitle?: string
 ): Promise<PushResult> {
   if (!channelToken || !toUserId) return { success: false, reason: '未提供 Token 或 User ID' };
   const liffUrl = `https://liff.line.me/${getSavedLiffId()}`;
 
   const isDue = dueCount > 0;
+  const titleText = customTitle?.trim() || '📢 課後單字學習提醒';
   const altText = isDue
     ? `📢 課後單字複習提醒：座號 ${seatNumber} 今日有 ${dueCount} 個單字待複習！`
     : `📢 觀光英文單字學習提醒：座號 ${seatNumber} 今日課後學習卡片已上線！`;
-  const bodyText = isDue
+  const defaultBodyText = isDue
     ? `📚 您今日有 ${dueCount} 個單字已進入記憶曲線複習池囉！`
     : `🌟 保持每日學習好習慣！觀光餐旅專業單字庫與最新關卡已準備就緒，點擊開始挑戰！`;
+
+  const bodyContents: any[] = [
+    { type: 'text', text: defaultBodyText, wrap: true, size: 'sm', color: '#333333' }
+  ];
+
+  if (customMessage && customMessage.trim()) {
+    bodyContents.push({
+      type: 'box',
+      layout: 'vertical',
+      margin: 'md',
+      paddingAll: 'sm',
+      backgroundColor: '#F0FDF4',
+      cornerRadius: 'md',
+      contents: [
+        { type: 'text', text: '💡 老師叮嚀：', weight: 'bold', size: 'xs', color: '#15803D' },
+        { type: 'text', text: customMessage.trim(), wrap: true, size: 'xs', color: '#166534', margin: 'xs' }
+      ]
+    });
+  }
+
+  bodyContents.push({
+    type: 'text',
+    text: `🔥 連續學習天數：${streakDays || 1} 天`,
+    size: 'xs',
+    color: '#888888',
+    margin: 'md'
+  });
 
   const messages = [
     {
@@ -314,17 +349,14 @@ export async function sendLinePushReminder(
           layout: 'vertical',
           backgroundColor: '#06C755',
           contents: [
-            { type: 'text', text: '📢 課後單字學習提醒', weight: 'bold', color: '#FFFFFF', size: 'xs' },
+            { type: 'text', text: titleText, weight: 'bold', color: '#FFFFFF', size: 'xs' },
             { type: 'text', text: `${studentName || '同學'} (座號 ${seatNumber})`, weight: 'bold', color: '#FFFFFF', size: 'xl', margin: 'sm' }
           ]
         },
         body: {
           type: 'box',
           layout: 'vertical',
-          contents: [
-            { type: 'text', text: bodyText, wrap: true, size: 'sm', color: '#333333' },
-            { type: 'text', text: `🔥 連續學習天數：${streakDays || 1} 天`, size: 'xs', color: '#888888', margin: 'md' }
-          ]
+          contents: bodyContents
         },
         footer: {
           type: 'box',
@@ -379,6 +411,8 @@ export async function sendLinePushReminder(
         liff: getSavedLiffId(),
         tk: channelToken.trim()
       });
+      if (customMessage?.trim()) params.append('msg', encodeURIComponent(customMessage.trim()));
+      if (customTitle?.trim()) params.append('title', encodeURIComponent(customTitle.trim()));
 
       const res = await fetch(`${gasUrl}?${params.toString()}`, {
         method: 'GET',
@@ -422,7 +456,9 @@ export async function sendLinePushReminder(
 export function shareIndividualStudentReminder(
   studentName: string,
   seatNumber: string,
-  dueCount: number
+  dueCount: number,
+  customMessage?: string,
+  customTitle?: string
 ): boolean {
   const liffUrl = `https://liff.line.me/${getSavedLiffId()}`;
   const isDue = dueCount > 0;
@@ -430,18 +466,28 @@ export function shareIndividualStudentReminder(
     ? `您今日有 ${dueCount} 個單字已進入記憶曲線複習池，請把握黃金複習時間！`
     : `觀光英文全冊 135 個專業單字與 Unit 7 最新關卡已上線，保持好習慣開始複習！`;
 
-  const shareText = `📢 【觀光英文單字卡 Pro】課後學習提醒\n\n親愛的 ${studentName || '同學'} (座號 ${seatNumber})：\n📚 老師提醒：${bodyMsg}\n👉 點此開始背單字：${liffUrl}`;
+  const customPart = customMessage?.trim() ? `\n\n💡 老師叮嚀：${customMessage.trim()}` : '';
+  const title = customTitle?.trim() || '課後學習提醒';
+
+  const shareText = `📢 【觀光英文單字卡 Pro】${title}\n\n親愛的 ${studentName || '同學'} (座號 ${seatNumber})：\n📚 學習進度：${bodyMsg}${customPart}\n\n👉 點此開始背單字：${liffUrl}`;
 
   const lineShareUrl = `https://line.me/R/msg/text/?${encodeURIComponent(shareText)}`;
   window.open(lineShareUrl, '_blank');
   return true;
 }
 
-export async function shareReminderViaLiffPicker(studentName?: string): Promise<boolean> {
+export async function shareReminderViaLiffPicker(
+  customMessage?: string,
+  customTitle?: string,
+  studentName?: string
+): Promise<boolean> {
   const liffUrl = `https://liff.line.me/${getSavedLiffId()}`;
+  const customPart = customMessage?.trim() ? `\n\n💡 老師叮嚀：${customMessage.trim()}` : '';
+  const title = customTitle?.trim() || '課後學習提醒';
+
   const shareText = studentName
-    ? `📢 【觀光英文單字卡 Pro】課後學習提醒\n\n親愛的 ${studentName} 同學：\n📚 老師提醒您記得點擊連結開始複習今日單字與 Unit 7 最新關卡！\n👉 點此開始背單字：${liffUrl}`
-    : `📢 【觀光英文單字卡 Pro】課後學習提醒！\n\n📚 老師提醒：請 205 班同學點擊下方連結開始複習今日單字與最新 Unit 7 關卡！\n👉 點此開始背單字：${liffUrl}`;
+    ? `📢 【觀光英文單字卡 Pro】${title}\n\n親愛的 ${studentName} 同學：\n📚 老師提醒您記得點擊連結開始複習今日單字與最新關卡！${customPart}\n\n👉 點此開始背單字：${liffUrl}`
+    : `📢 【觀光英文單字卡 Pro】${title}！\n\n📚 老師提醒：請 205 班同學點擊下方連結開始複習今日單字與最新關卡！${customPart}\n\n👉 點此開始背單字：${liffUrl}`;
 
   try {
     if (isLiffEnvironment()) {
@@ -449,10 +495,29 @@ export async function shareReminderViaLiffPicker(studentName?: string): Promise<
         await initLiff();
       }
       if (liff.isLoggedIn() && liff.isApiAvailable('shareTargetPicker')) {
+        const bodyContents: any[] = [
+          { type: 'text', text: studentName ? `📚 老師提醒您記得點擊下方按鈕開始複習今日單字！` : '📚 老師提醒：請 205 班同學點擊下方按鈕開始複習今日單字與最新關卡！', wrap: true, size: 'sm', color: '#333333' }
+        ];
+
+        if (customMessage?.trim()) {
+          bodyContents.push({
+            type: 'box',
+            layout: 'vertical',
+            margin: 'md',
+            paddingAll: 'sm',
+            backgroundColor: '#F0FDF4',
+            cornerRadius: 'md',
+            contents: [
+              { type: 'text', text: '💡 老師叮嚀：', weight: 'bold', size: 'xs', color: '#15803D' },
+              { type: 'text', text: customMessage.trim(), wrap: true, size: 'xs', color: '#166534', margin: 'xs' }
+            ]
+          });
+        }
+
         const res = await liff.shareTargetPicker([
           {
             type: 'flex',
-            altText: '📢 205班 觀光餐旅英文單字卡課後學習提醒！',
+            altText: `📢 【觀光英文單字卡 Pro】${title}！`,
             contents: {
               type: 'bubble',
               size: 'mega',
@@ -461,16 +526,14 @@ export async function shareReminderViaLiffPicker(studentName?: string): Promise<
                 layout: 'vertical',
                 backgroundColor: '#06C755',
                 contents: [
-                  { type: 'text', text: '📢 課後單字學習提醒', weight: 'bold', color: '#FFFFFF', size: 'xs' },
+                  { type: 'text', text: title, weight: 'bold', color: '#FFFFFF', size: 'xs' },
                   { type: 'text', text: studentName ? `${studentName} 同學` : '觀光餐旅英文 學習卡片已發布！', weight: 'bold', color: '#FFFFFF', size: 'lg', margin: 'sm' }
                 ]
               },
               body: {
                 type: 'box',
                 layout: 'vertical',
-                contents: [
-                  { type: 'text', text: '📚 老師提醒：請點擊下方按鈕開始複習今日單字與最新 Unit 7 關卡！', wrap: true, size: 'sm', color: '#333333' }
-                ]
+                contents: bodyContents
               },
               footer: {
                 type: 'box',
