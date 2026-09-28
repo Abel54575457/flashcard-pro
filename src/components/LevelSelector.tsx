@@ -14,7 +14,8 @@ import {
   Trophy,
   Sparkles,
   Zap,
-  ChevronRight
+  ChevronRight,
+  Smartphone
 } from 'lucide-react';
 
 interface LevelSelectorProps {
@@ -26,6 +27,7 @@ interface LevelSelectorProps {
   onOpenLogin: () => void;
   onOpenGuide?: () => void;
   onOpenMasterList?: () => void;
+  onOpenPwaInstall?: () => void;
 }
 
 export const LevelSelector: React.FC<LevelSelectorProps> = ({
@@ -37,6 +39,7 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
   onOpenLogin,
   onOpenGuide,
   onOpenMasterList,
+  onOpenPwaInstall,
 }) => {
   // 動態抓取關卡編號 (如 1 ~ 6，甚至新匯入的 7, 8 關卡)
   const derivedLevelIds = Array.from(new Set(words.map((w) => w.levelId || 1))).sort((a, b) => a - b);
@@ -95,9 +98,9 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
               </div>
             </div>
 
-            {/* Quick Action: Master List Button */}
-            {onOpenMasterList && (
-              <div className="pt-2">
+            {/* Quick Actions: Master List Button & PWA Install Button */}
+            <div className="pt-2 flex flex-wrap items-center gap-2.5">
+              {onOpenMasterList && (
                 <button
                   onClick={() => {
                     soundSynth.playFlip();
@@ -108,8 +111,22 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                   <BookOpen className="w-4 h-4 text-stone-950" />
                   <span>📖 開啟全冊單字總表 (預習與對照)</span>
                 </button>
-              </div>
-            )}
+              )}
+
+              {onOpenPwaInstall && (
+                <button
+                  onClick={() => {
+                    soundSynth.playFlip();
+                    onOpenPwaInstall();
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-400/40 font-extrabold text-xs transition-all flex items-center space-x-2 active:scale-95"
+                  title="將單字卡下載至手機桌面 (PWA)"
+                >
+                  <Smartphone className="w-4 h-4 text-emerald-400" />
+                  <span>📲 加到手機主畫面 (App)</span>
+                </button>
+              )}
+            </div>
 
           </div>
 

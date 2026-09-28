@@ -16,6 +16,7 @@ import { MemoryMatchGame } from './components/MemoryMatchGame';
 import { MistakeNotebook } from './components/MistakeNotebook';
 import { Leaderboard } from './components/Leaderboard';
 import { TeacherDashboard } from './components/TeacherDashboard';
+import { PwaInstallModal } from './components/PwaInstallModal';
 
 import { initAudioUnlock } from './services/tts';
 import { initLiff, getLiffUserProfile } from './services/liff';
@@ -31,6 +32,7 @@ export function App() {
   const [isLoginOpen, setIsLoginOpen] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [isMasterListOpen, setIsMasterListOpen] = useState<boolean>(false);
+  const [isPwaModalOpen, setIsPwaModalOpen] = useState<boolean>(false);
   const [isFirebaseActive, setIsFirebaseActive] = useState<boolean>(false);
 
   // 初始化載入
@@ -274,6 +276,7 @@ export function App() {
         onOpenLogin={() => setIsLoginOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
         onOpenMasterList={() => setIsMasterListOpen(true)}
+        onOpenPwaInstall={() => setIsPwaModalOpen(true)}
         onUpdateTheme={handleUpdateTheme}
         speechRate={speechRate}
         onToggleSpeechRate={() => setSpeechRate((r) => (r === 1.0 ? 0.7 : 1.0))}
@@ -298,6 +301,7 @@ export function App() {
             onOpenLogin={() => setIsLoginOpen(true)}
             onOpenGuide={() => setIsGuideOpen(true)}
             onOpenMasterList={() => setIsMasterListOpen(true)}
+            onOpenPwaInstall={() => setIsPwaModalOpen(true)}
           />
         )}
 
@@ -390,6 +394,14 @@ export function App() {
         userProfile={userProfile}
         isOpen={isMasterListOpen}
         onClose={() => setIsMasterListOpen(false)}
+      />
+
+      {/* PWA Phone Desktop Install Modal */}
+      <PwaInstallModal
+        isOpen={isPwaModalOpen}
+        onClose={() => setIsPwaModalOpen(false)}
+        userSeatNumber={userProfile.seatNumber}
+        lineBound={!!userProfile.lineUserId}
       />
 
     </div>

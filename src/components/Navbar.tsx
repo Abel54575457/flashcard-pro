@@ -14,7 +14,8 @@ import {
   HelpCircle,
   Trophy,
   Zap,
-  BookOpen
+  BookOpen,
+  Smartphone
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -24,6 +25,7 @@ interface NavbarProps {
   onOpenLogin: () => void;
   onOpenGuide?: () => void;
   onOpenMasterList?: () => void;
+  onOpenPwaInstall?: () => void;
   onUpdateTheme: (color: ThemeColor) => void;
   speechRate: number;
   onToggleSpeechRate: () => void;
@@ -39,6 +41,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenLogin,
   onOpenGuide,
   onOpenMasterList,
+  onOpenPwaInstall,
   speechRate,
   onToggleSpeechRate,
   soundEnabled,
@@ -181,6 +184,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title="查看通關指南與說明"
               >
                 <HelpCircle className="w-4 h-4 text-amber-700" />
+              </button>
+            )}
+
+            {/* PWA Install Button */}
+            {onOpenPwaInstall && (
+              <button
+                onClick={() => {
+                  soundSynth.playFlip();
+                  onOpenPwaInstall();
+                }}
+                className="flex items-center space-x-1 px-2 py-1.5 sm:px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold transition-all shrink-0 active:scale-95"
+                title="下載單字卡至手機桌面 (PWA)"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="hidden sm:inline">下載 App</span>
               </button>
             )}
 

@@ -150,6 +150,9 @@ export function mergeUserProfiles(local: UserProfile, remote: UserProfile): User
     progress: mergedProgress,
     wordStats: mergedWordStats,
     lastActive,
+    lineUserId: local.lineUserId || remote.lineUserId,
+    lineDisplayName: local.lineDisplayName || remote.lineDisplayName,
+    linePictureUrl: local.linePictureUrl || remote.linePictureUrl,
   };
 }
 
