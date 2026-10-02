@@ -216,11 +216,17 @@ export function getCustomWords(): WordItem[] {
       saveCustomWords(INITIAL_WORDS);
       return INITIAL_WORDS;
     }
-    // 自動無損合併預設最新單字庫，確保新增單字卡（如 9/16 新增）能在既有使用者裝置上出現
+    // 自動無損合併預設最新單字庫，確保新增單字卡（如 10/2 新增）與既有系統單字釋義更新能同步呈現
     const wordMap = new Map<string, WordItem>();
     INITIAL_WORDS.forEach((w) => wordMap.set(w.id, w));
     parsed.forEach((w) => {
-      wordMap.set(w.id, { ...(wordMap.get(w.id) || {}), ...w });
+      if (wordMap.has(w.id)) {
+        // 系統預設單字：以最新 INITIAL_WORDS 定義為準（同步例句、釋義、提示），但保留任何自訂擴充屬性
+        wordMap.set(w.id, { ...w, ...wordMap.get(w.id)! });
+      } else {
+        // 使用者自訂卡片：完整保留
+        wordMap.set(w.id, w);
+      }
     });
     const merged = Array.from(wordMap.values());
     localStorage.setItem(CUSTOM_WORDS_KEY, JSON.stringify(merged));
