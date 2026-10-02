@@ -424,9 +424,14 @@ export const PushReminderModal: React.FC<PushReminderModalProps> = ({
             </div>
 
             {/* Info hint */}
-            <p className="text-[11px] text-slate-400 font-medium text-center">
-              💡 學生在 LINE 聊天室中收到的卡片樣式即為上方預覽樣態。
-            </p>
+            <div className="text-[11px] text-slate-500 font-medium space-y-1 bg-white p-2.5 rounded-xl border border-slate-200">
+              <p className="flex items-center space-x-1 text-slate-700 font-bold">
+                <span>📱 學生在 LINE 聊天室中收到的卡片樣式即為上方預覽樣態。</span>
+              </p>
+              <p className="text-[10px] text-amber-700 leading-normal">
+                💡 若官方 Bot 送出後學生端未出現「老師叮嚀」綠色區塊，表示您的 Google Apps Script 雲端腳本仍為舊版。請至後台「Firebase 雲端設定」點擊「📋 1 鍵複製 GAS 程式碼」重新發布即可同步支援！
+              </p>
+            </div>
           </div>
         </div>
 

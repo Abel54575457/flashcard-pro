@@ -219,12 +219,12 @@ export async function sendLineBatchReminders(
     }
     return {
       to: st.lineUserId,
-      name: encodeURIComponent(st.lineDisplayName || `座號 ${st.seatNumber}`),
+      name: st.lineDisplayName || `座號 ${st.seatNumber}`,
       seat: st.seatNumber,
       due: dueCount,
       streak: st.streakDays || 1,
-      msg: customMessage ? encodeURIComponent(customMessage.trim()) : undefined,
-      title: customTitle ? encodeURIComponent(customTitle.trim()) : undefined
+      msg: customMessage?.trim() || undefined,
+      title: customTitle?.trim() || undefined
     };
   });
 
@@ -236,8 +236,16 @@ export async function sendLineBatchReminders(
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 秒上限，留足冷啟動時間
-    const customParams = `${customMessage ? `&msg=${encodeURIComponent(customMessage.trim())}` : ''}${customTitle ? `&title=${encodeURIComponent(customTitle.trim())}` : ''}`;
-    const url = `${cleanGas}?action=batch&liff=${encodeURIComponent(getSavedLiffId())}&tk=${encodeURIComponent(channelToken)}&data=${encodeURIComponent(JSON.stringify(payload))}${customParams}`;
+    const searchParams = new URLSearchParams({
+      action: 'batch',
+      liff: getSavedLiffId(),
+      tk: channelToken.trim(),
+      data: JSON.stringify(payload)
+    });
+    if (customMessage?.trim()) searchParams.append('msg', customMessage.trim());
+    if (customTitle?.trim()) searchParams.append('title', customTitle.trim());
+
+    const url = `${cleanGas}?${searchParams.toString()}`;
     const res = await fetch(url, { method: 'GET', signal: controller.signal });
     clearTimeout(timeoutId);
 
@@ -404,15 +412,15 @@ export async function sendLinePushReminder(
       const params = new URLSearchParams({
         action: 'push',
         to: toUserId,
-        name: encodeURIComponent(studentName || '同學'),
+        name: studentName || '同學',
         seat: seatNumber,
         due: String(dueCount),
         streak: String(streakDays),
         liff: getSavedLiffId(),
         tk: channelToken.trim()
       });
-      if (customMessage?.trim()) params.append('msg', encodeURIComponent(customMessage.trim()));
-      if (customTitle?.trim()) params.append('title', encodeURIComponent(customTitle.trim()));
+      if (customMessage?.trim()) params.append('msg', customMessage.trim());
+      if (customTitle?.trim()) params.append('title', customTitle.trim());
 
       const res = await fetch(`${gasUrl}?${params.toString()}`, {
         method: 'GET',

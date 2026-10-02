@@ -1,11 +1,12 @@
 /**
- * LINE Messaging API 課後推播 Google Apps Script (GAS) 代理程式 — 2026 極速版
+ * LINE Messaging API 課後推播 Google Apps Script (GAS) 代理程式 — 2026.10 最新加強版
  * 
  * 功能特點：
- * 1. 【Token 驗證】支援 action=check，一秒檢測 Token 與 LINE Bot 是否連線正常
+ * 1. 【Token 驗證】支援 action=check，一秒檢測 Token 與 LINE Bot 是否連線正常，並回傳支援版本
  * 2. 【全班極速推播】支援 action=batch，全班推播在 Google 雲端 2 秒內完成，絕不卡死瀏覽器
  * 3. 【個別推播】支援 action=push，單一學生推播
- * 4. 【高相容性】自動處理 GET 與 POST，原生支援 CORS
+ * 4. 【老師叮嚀支援】100% 完整支援「💡 老師叮嚀／自訂修改內容」，同步顯示於 LINE Flex 綠色卡片中
+ * 5. 【容錯與防崩潰】內建 safeDecode 安全解碼，即使包含特殊符號或百分比 (如 100%) 亦絕不報錯
  */
 
 // ⭐ 備用 LINE Channel Access Token
@@ -24,6 +25,16 @@ function doPost(e) {
     } catch(err) {}
   }
   return handleRequest(params);
+}
+
+function safeDecode(val) {
+  if (val === null || val === undefined) return '';
+  var s = String(val);
+  try {
+    return decodeURIComponent(s);
+  } catch(e) {
+    return s;
+  }
 }
 
 function handleRequest(params) {
@@ -48,6 +59,8 @@ function handleRequest(params) {
         return jsonResponse({
           success: true,
           status: 200,
+          version: '2026.10',
+          supportsCustomMsg: true,
           botName: info.displayName || 'LINE 官方帳號',
           botId: info.basicId || ''
         }, callback);
@@ -55,6 +68,8 @@ function handleRequest(params) {
         return jsonResponse({
           success: false,
           status: code,
+          version: '2026.10',
+          supportsCustomMsg: true,
           error: (code === 401 ? 'LINE Token 已失效 (401 認證失敗)，請至 LINE Developers 重新發行' : text)
         }, callback);
       }
@@ -66,8 +81,8 @@ function handleRequest(params) {
   // 2. 全班批次推播模式 (action=batch)
   if (action === 'batch') {
     var rawData = params.data || params.students || '[]';
-    var batchCustomMsg = params.msg ? decodeURIComponent(params.msg) : '';
-    var batchCustomTitle = params.title ? decodeURIComponent(params.title) : '';
+    var batchCustomMsg = safeDecode(params.msg || '');
+    var batchCustomTitle = safeDecode(params.title || '');
     var students = [];
     try {
       students = (typeof rawData === 'string') ? JSON.parse(rawData) : rawData;
@@ -83,12 +98,16 @@ function handleRequest(params) {
       var s = students[i];
       var to = s.to || s.t || '';
       if (!to) continue;
-      var name = decodeURIComponent(s.name || s.n || '同學');
+      var name = safeDecode(s.name || s.n || '同學');
       var seat = s.seat || s.s || '';
       var due = parseInt(s.due || s.d || '0');
       var streak = parseInt(s.streak || s.k || '1');
-      var itemMsg = s.msg ? decodeURIComponent(s.msg) : batchCustomMsg;
-      var itemTitle = s.title ? decodeURIComponent(s.title) : batchCustomTitle;
+      var itemMsg = (s.msg !== undefined && s.msg !== null && String(s.msg).trim().length > 0)
+        ? safeDecode(s.msg)
+        : batchCustomMsg;
+      var itemTitle = (s.title !== undefined && s.title !== null && String(s.title).trim().length > 0)
+        ? safeDecode(s.title)
+        : batchCustomTitle;
 
       var pushRes = doPushOne(token, to, name, seat, due, streak, liffUrl, itemMsg, itemTitle);
       if (pushRes.success) {
@@ -104,6 +123,8 @@ function handleRequest(params) {
       sentCount: sentCount,
       failCount: failCount,
       total: students.length,
+      version: '2026.10',
+      supportsCustomMsg: true,
       errors: errors
     }, callback);
   }
@@ -113,12 +134,12 @@ function handleRequest(params) {
   if (!to) {
     return jsonResponse({ success: false, error: '缺少 to 參數 (學生 LINE User ID)' }, callback);
   }
-  var name = decodeURIComponent(params.name || '同學');
+  var name = safeDecode(params.name || '同學');
   var seat = params.seat || '';
   var due = parseInt(params.due || '0');
   var streak = parseInt(params.streak || '1');
-  var singleCustomMsg = params.msg ? decodeURIComponent(params.msg) : '';
-  var singleCustomTitle = params.title ? decodeURIComponent(params.title) : '';
+  var singleCustomMsg = safeDecode(params.msg || '');
+  var singleCustomTitle = safeDecode(params.title || '');
 
   var singleRes = doPushOne(token, to, name, seat, due, streak, liffUrl, singleCustomMsg, singleCustomTitle);
   return jsonResponse(singleRes, callback);
@@ -126,7 +147,11 @@ function handleRequest(params) {
 
 function doPushOne(token, to, name, seat, due, streak, liffUrl, customMsg, customTitle) {
   var isDue = due > 0;
-  var title = (customTitle && customTitle.trim().length > 0) ? customTitle.trim() : '📢 課後單字學習提醒';
+  var safeTitle = safeDecode(customTitle);
+  var title = (safeTitle && safeTitle.trim().length > 0) ? safeTitle.trim() : '📢 課後單字學習提醒';
+  var safeMsg = safeDecode(customMsg);
+  var cleanCustomMsg = (safeMsg && safeMsg.trim().length > 0) ? safeMsg.trim() : '';
+
   var altText = isDue
     ? ('課後單字複習提醒：座號 ' + seat + ' 有 ' + due + ' 個單字待複習！')
     : ('課後學習提醒：觀光英文單字卡已上線！');
@@ -138,7 +163,8 @@ function doPushOne(token, to, name, seat, due, streak, liffUrl, customMsg, custo
     { type: 'text', text: bodyText, wrap: true, size: 'sm', color: '#333333' }
   ];
 
-  if (customMsg && customMsg.trim && customMsg.trim().length > 0) {
+  // ⭐ 老師叮嚀區塊（若有自訂內容則顯示綠色醒目框）
+  if (cleanCustomMsg && cleanCustomMsg.length > 0) {
     bodyContents.push({
       type: 'box',
       layout: 'vertical',
@@ -148,14 +174,14 @@ function doPushOne(token, to, name, seat, due, streak, liffUrl, customMsg, custo
       cornerRadius: 'md',
       contents: [
         { type: 'text', text: '💡 老師叮嚀：', weight: 'bold', size: 'xs', color: '#15803D' },
-        { type: 'text', text: customMsg.trim(), wrap: true, size: 'xs', color: '#166534', margin: 'xs' }
+        { type: 'text', text: cleanCustomMsg, wrap: true, size: 'xs', color: '#166534', margin: 'xs' }
       ]
     });
   }
 
   bodyContents.push({
     type: 'text',
-    text: '🔥 連續學習天數：' + streak + ' 天',
+    text: '🔥 連續學習天數：' + (streak || 1) + ' 天',
     size: 'xs',
     color: '#888888',
     margin: 'md'
@@ -203,6 +229,7 @@ function doPushOne(token, to, name, seat, due, streak, liffUrl, customMsg, custo
     return {
       success: (code === 200),
       status: code,
+      version: '2026.10',
       error: (code !== 200) ? ('LINE ' + code + ': ' + text) : ''
     };
   } catch(err) {
