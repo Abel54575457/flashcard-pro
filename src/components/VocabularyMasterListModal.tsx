@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { WordItem, UserProfile } from '../types';
 import { soundSynth } from '../services/soundEffects';
+import { speakWord, isFrenchTerm } from '../services/tts';
 import { LEVEL_NAMES } from '../data/grade2Words';
 import {
   BookOpen,
@@ -63,8 +64,8 @@ export const VocabularyMasterListModal: React.FC<VocabularyMasterListModalProps>
     window.print();
   };
 
-  const playWordAudio = (word: string) => {
-    soundSynth.speakWord(word);
+  const playWordAudio = (w: WordItem) => {
+    speakWord(w.word, 1.0, 1.0, w.lang, w.hint);
   };
 
   return (
@@ -267,10 +268,20 @@ export const VocabularyMasterListModal: React.FC<VocabularyMasterListModalProps>
                           </span>
                         )}
 
+                        {(isFrenchTerm(w.word, w.hint) || w.lang === 'fr-FR') && (
+                          <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-bold">
+                            🇫🇷 法文
+                          </span>
+                        )}
+
                         <button
-                          onClick={() => playWordAudio(w.word)}
-                          className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 transition-all"
-                          title="朗讀發音"
+                          onClick={() => playWordAudio(w)}
+                          className={`p-1.5 rounded-lg transition-all ${
+                            isFrenchTerm(w.word, w.hint) || w.lang === 'fr-FR'
+                              ? 'bg-blue-50 hover:bg-blue-100 text-blue-800'
+                              : 'bg-amber-50 hover:bg-amber-100 text-amber-800'
+                          }`}
+                          title={isFrenchTerm(w.word, w.hint) || w.lang === 'fr-FR' ? '🇫🇷 朗讀法文發音' : '朗讀發音'}
                         >
                           <Volume2 className="w-4 h-4 text-amber-700" />
                         </button>
@@ -358,10 +369,15 @@ export const VocabularyMasterListModal: React.FC<VocabularyMasterListModalProps>
                       </td>
                       <td className="py-3 px-4 text-center">
                         <button
-                          onClick={() => playWordAudio(w.word)}
-                          className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 transition-all inline-block"
+                          onClick={() => playWordAudio(w)}
+                          className={`p-1.5 rounded-lg transition-all inline-block ${
+                            isFrenchTerm(w.word, w.hint) || w.lang === 'fr-FR'
+                              ? 'bg-blue-50 hover:bg-blue-100 text-blue-800'
+                              : 'bg-amber-50 hover:bg-amber-100 text-amber-800'
+                          }`}
+                          title={isFrenchTerm(w.word, w.hint) || w.lang === 'fr-FR' ? '🇫🇷 朗讀法文發音' : '朗讀發音'}
                         >
-                          <Volume2 className="w-4 h-4 text-amber-700" />
+                          <Volume2 className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>

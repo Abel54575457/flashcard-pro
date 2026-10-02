@@ -13,6 +13,7 @@ export interface WordItem {
   exampleZh: string;         // 中文例句
   category: string;          // 主題分類 (Food, Animals, Family, Colors, School, Actions)
   hint?: string;             // 提示
+  lang?: string;             // 發音語系 (例如 'fr-FR' 或 'en-US')
 }
 
 export interface WordStat {

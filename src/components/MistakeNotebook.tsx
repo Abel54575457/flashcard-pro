@@ -144,7 +144,7 @@ export const MistakeNotebook: React.FC<MistakeNotebookProps> = ({
                   </div>
 
                   <button
-                    onClick={() => speakWord(word.word, speechRate)}
+                    onClick={() => speakWord(word.word, speechRate, 1.0, word.lang, word.hint)}
                     className="p-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors"
                     title="朗讀發音"
                   >

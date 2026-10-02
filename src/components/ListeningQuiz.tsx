@@ -59,7 +59,7 @@ export const ListeningQuiz: React.FC<ListeningQuizProps> = ({
   useEffect(() => {
     if (currentQ && !isFinished) {
       setSelectedAnswer(null);
-      speakWord(currentQ.word.word, speechRate);
+      speakWord(currentQ.word.word, speechRate, 1.0, currentQ.word.lang, currentQ.word.hint);
     }
   }, [currentIndex, currentQ, isFinished, speechRate]);
 
@@ -159,7 +159,7 @@ export const ListeningQuiz: React.FC<ListeningQuizProps> = ({
       <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-3xl p-8 sm:p-12 text-white text-center shadow-xl space-y-6 relative overflow-hidden">
         <div className="w-24 h-24 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mx-auto shadow-inner">
           <button
-            onClick={() => speakWord(currentQ.word.word, speechRate)}
+            onClick={() => speakWord(currentQ.word.word, speechRate, 1.0, currentQ.word.lang, currentQ.word.hint)}
             className="w-18 h-18 bg-white text-amber-600 rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 active:scale-95 transition-all"
             title="點擊重播發音"
           >

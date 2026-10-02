@@ -44,7 +44,7 @@ export const SpellingQuiz: React.FC<SpellingQuizProps> = ({
     setIsCorrect(null);
     setShowHint(false);
 
-    speakWord(currentWord.word, speechRate);
+    speakWord(currentWord.word, speechRate, 1.0, currentWord.lang, currentWord.hint);
   }, [currentIndex, currentWord, speechRate]);
 
   if (!currentWord || isFinished) {
@@ -150,7 +150,7 @@ export const SpellingQuiz: React.FC<SpellingQuizProps> = ({
       {/* Target Word Prompt Card */}
       <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl p-8 text-white text-center shadow-xl space-y-4">
         <button
-          onClick={() => speakWord(currentWord.word, speechRate)}
+          onClick={() => speakWord(currentWord.word, speechRate, 1.0, currentWord.lang, currentWord.hint)}
           className="px-4 py-2 rounded-full bg-white/20 hover:bg-white/30 text-white font-extrabold text-xs inline-flex items-center space-x-2 backdrop-blur-md"
         >
           <Volume2 className="w-4 h-4 animate-pulse" />

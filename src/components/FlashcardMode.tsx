@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { WordItem, WordStat } from '../types';
-import { speakWord } from '../services/tts';
+import { speakWord, isFrenchTerm } from '../services/tts';
 import { updateWordStatOnResult } from '../services/spacedRepetition';
 import { soundSynth } from '../services/soundEffects';
 import {
@@ -76,12 +76,15 @@ export const FlashcardMode: React.FC<FlashcardModeProps> = ({
   const currentWord = words[currentIndex];
   const currentStat = currentWord ? wordStats[currentWord.id] : undefined;
 
+  // 判定是否為法文專有名詞
+  const isFrench = currentWord ? (currentWord.lang === 'fr-FR' || isFrenchTerm(currentWord.word, currentWord.hint)) : false;
+
   // 切換到新單字時自動發音並重置卡片面
   useEffect(() => {
     if (currentWord) {
       setIsFlipped(false);
       setShowHint(false);
-      speakWord(currentWord.word, speechRate);
+      speakWord(currentWord.word, speechRate, 1.0, currentWord.lang, currentWord.hint);
     }
   }, [currentIndex, currentWord, speechRate]);
 
@@ -222,16 +225,27 @@ export const FlashcardMode: React.FC<FlashcardModeProps> = ({
                 {currentWord.word}
               </h2>
 
-              <div className="flex items-center justify-center pt-1">
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                {isFrench && (
+                  <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-800 text-[11px] font-black border border-blue-200 shadow-2xs flex items-center space-x-1">
+                    <span>🇫🇷 法式專業用語</span>
+                  </span>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    speakWord(currentWord.word, speechRate);
+                    speakWord(currentWord.word, speechRate, 1.0, currentWord.lang, currentWord.hint);
                   }}
-                  className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center space-x-1.5 shadow-md shadow-indigo-200 transition-transform active:scale-95 shrink-0"
+                  className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full font-bold text-xs flex items-center space-x-1.5 shadow-md transition-transform active:scale-95 shrink-0 ${
+                    isFrench
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200'
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200'
+                  }`}
                 >
                   <Volume2 className="w-4 h-4 animate-pulse" />
-                  <span>點擊發音 ({speechRate === 1.0 ? '1.0x' : '0.7x慢速'})</span>
+                  <span>
+                    {isFrench ? '點擊聽法文發音' : `點擊發音 (${speechRate === 1.0 ? '1.0x' : '0.7x慢速'})`}
+                  </span>
                 </button>
               </div>
 
@@ -253,7 +267,14 @@ export const FlashcardMode: React.FC<FlashcardModeProps> = ({
           <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-3xl p-5 sm:p-8 flex flex-col justify-between items-center text-center bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white shadow-2xl overflow-y-auto">
             
             <div className="w-full flex items-center justify-between text-indigo-300 text-xs font-bold shrink-0">
-              <span className="px-2 py-0.5 rounded-md bg-white/10">{currentWord.partOfSpeech}</span>
+              <div className="flex items-center space-x-1.5">
+                <span className="px-2 py-0.5 rounded-md bg-white/10">{currentWord.partOfSpeech}</span>
+                {isFrench && (
+                  <span className="px-2 py-0.5 rounded-md bg-blue-500/30 text-blue-200 border border-blue-400/30 text-[10px]">
+                    🇫🇷 法文源字
+                  </span>
+                )}
+              </div>
               <span>音標：{currentWord.phonetic}</span>
             </div>
 
@@ -272,10 +293,10 @@ export const FlashcardMode: React.FC<FlashcardModeProps> = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        speakWord(currentWord.exampleEn, speechRate);
+                        speakWord(currentWord.exampleEn, speechRate, 1.0, 'en-US');
                       }}
                       className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white ml-2 shrink-0 transition-colors"
-                      title="朗讀例句"
+                      title="朗讀英文例句"
                     >
                       <Volume1 className="w-4 h-4" />
                     </button>
