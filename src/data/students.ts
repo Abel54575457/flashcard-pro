@@ -38,8 +38,21 @@ export const CLASS_205_STUDENTS: StudentInfo[] = [
   { seatNumber: '31', studentId: '411608', name: '洪妤恩' },
 ];
 
+// 教師與人員測試專用座號 (32 ~ 35 號)
+export const TEST_ACCOUNTS: StudentInfo[] = [
+  { seatNumber: '32', studentId: 'TEST-01', name: '測試帳號 32', isTest: true },
+  { seatNumber: '33', studentId: 'TEST-02', name: '測試帳號 33', isTest: true },
+  { seatNumber: '34', studentId: 'TEACHER', name: '李宛青 (教師測試)', isTest: true },
+  { seatNumber: '35', studentId: 'TEST-03', name: '蔡昀穎 (人員測試)', isTest: true },
+];
+
+export const ALL_ROSTER: StudentInfo[] = [
+  ...CLASS_205_STUDENTS,
+  ...TEST_ACCOUNTS,
+];
+
 export const STUDENT_MAP = new Map<string, StudentInfo>(
-  CLASS_205_STUDENTS.map((st) => [st.seatNumber, st])
+  ALL_ROSTER.map((st) => [st.seatNumber, st])
 );
 
 export function getStudentBySeat(seat: string): StudentInfo | undefined {

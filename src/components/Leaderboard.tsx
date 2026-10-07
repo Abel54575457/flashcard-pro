@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, WordItem } from '../types';
+import type { UserProfile, WordItem } from '../types';
 import { getLocalProfileForSeat, mergeUserProfiles } from '../services/storage';
 import { fetchAllStudentsFromFirestore } from '../services/firebase';
 import { calculateMasteryRate } from '../services/spacedRepetition';
 import { soundSynth } from '../services/soundEffects';
+import { ALL_ROSTER, getStudentBySeat } from '../data/students';
 import {
   Trophy,
   Crown,
@@ -29,6 +30,8 @@ interface LeaderboardProps {
 
 export interface StudentRankItem {
   seatNumber: string;
+  studentName?: string;
+  isTest?: boolean;
   lineDisplayName?: string;
   linePictureUrl?: string;
   stars: number;
@@ -69,8 +72,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
     // 2. 彙整 01 ~ 35 號真實資料 (無損合併 LocalStorage 與 Firestore 數據)
     const list: StudentRankItem[] = [];
 
-    for (let i = 1; i <= 35; i++) {
-      const seatStr = String(i).padStart(2, '0');
+    for (const r of ALL_ROSTER) {
+      const seatStr = r.seatNumber;
       const isCurr = seatStr === currentProfile.seatNumber;
 
       const localProfile = getLocalProfileForSeat(seatStr);
@@ -94,6 +97,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
         const mastery = calculateMasteryRate(allWordIds, merged.wordStats || {});
         list.push({
           seatNumber: seatStr,
+          studentName: r.name,
+          isTest: r.isTest,
           lineDisplayName: merged.lineDisplayName,
           linePictureUrl: merged.linePictureUrl,
           stars: merged.stars || 0,
@@ -106,6 +111,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
       } else {
         list.push({
           seatNumber: seatStr,
+          studentName: r.name,
+          isTest: r.isTest,
           stars: 0,
           streakDays: 0,
           unlockedLevel: 1,
@@ -133,9 +140,11 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
     return 0;
   });
 
-  // 搜尋過濾
+  // 搜尋過濾 (支援座號、真實姓名、LINE 暱稱)
   const filteredStudents = sortedStudents.filter((st) =>
-    st.seatNumber.includes(searchTerm.trim()) || `座號 ${st.seatNumber}`.includes(searchTerm.trim())
+    st.seatNumber.includes(searchTerm.trim()) ||
+    (st.studentName || '').includes(searchTerm.trim()) ||
+    (st.lineDisplayName || '').includes(searchTerm.trim())
   );
 
   // 統計資訊
@@ -401,8 +410,19 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                           className="w-6 h-6 rounded-full border border-slate-200 object-cover shrink-0"
                         />
                       ) : null}
-                      <div className="font-black text-slate-900 text-sm sm:text-base">
-                        座號 {st.seatNumber} {st.lineDisplayName ? `(${st.lineDisplayName})` : ''}
+                      <div className="font-black text-slate-900 text-sm sm:text-base flex items-center space-x-1.5 flex-wrap">
+                        <span>座號 {st.seatNumber}</span>
+                        {st.studentName && (
+                          <span className="text-slate-800 font-extrabold">{st.studentName}</span>
+                        )}
+                        {st.isTest && (
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700">
+                            測試
+                          </span>
+                        )}
+                        {st.lineDisplayName && st.lineDisplayName !== st.studentName && (
+                          <span className="text-xs text-slate-400 font-normal">({st.lineDisplayName})</span>
+                        )}
                       </div>
 
                       {st.isCurrentUser && (

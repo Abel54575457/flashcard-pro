@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { UserProfile, ThemeColor } from '../types';
 import { soundSynth } from '../services/soundEffects';
-import { CLASS_205_STUDENTS, getStudentBySeat } from '../data/students';
+import { CLASS_205_STUDENTS, TEST_ACCOUNTS, ALL_ROSTER, getStudentBySeat } from '../data/students';
 import type { StudentInfo } from '../data/students';
 import { getLiffUserProfile } from '../services/liff';
 import type { LiffUserProfile } from '../services/liff';
@@ -88,7 +88,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     onClose();
   };
 
-  const filteredStudents = CLASS_205_STUDENTS.filter(
+  const filteredStudents = ALL_ROSTER.filter(
     (st) =>
       st.seatNumber.includes(searchTerm.trim()) ||
       st.name.includes(searchTerm.trim()) ||
@@ -116,10 +116,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </div>
           <div>
             <h2 className="text-xl font-black text-slate-900">
-              {confirmStep ? '核對身分與防呆確認' : '205 班學生選擇座號'}
+              {confirmStep ? '核對身分與防呆確認' : '學生與人員登入座號'}
             </h2>
             <p className="text-xs text-slate-500">
-              {confirmStep ? '請確認這是您本人的座號與姓名，避免進度誤記' : '請找到您的名字與座號後點擊進入'}
+              {confirmStep ? '請確認這是您本人的座號與姓名，避免進度誤記' : '205 班正式學生 (01~31) ‧ 測試與教師座號 (32~35)'}
             </p>
           </div>
         </div>
@@ -135,7 +135,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <span className="text-[11px]">205 班雲端資料庫</span>
           </div>
           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-            官方名冊 31 位同學
+            學生 31 位 ＋ 測試 4 位
           </span>
         </div>
 
@@ -149,46 +149,93 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="搜尋姓名或座號 (例如: 洪妤恩 或 31)..."
+                placeholder="搜尋姓名、座號或學號 (例如: 洪妤恩 或 31 或 測試)..."
                 className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-slate-900"
               />
             </div>
 
             {/* Students Grid */}
-            <div className="flex-1 overflow-y-auto pr-1">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {filteredStudents.map((st) => {
-                  const isCurrent = selectedSeat === st.seatNumber;
-                  return (
-                    <button
-                      key={st.seatNumber}
-                      type="button"
-                      onClick={() => handleSelectSeat(st)}
-                      className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col justify-between group ${
-                        isCurrent
-                          ? 'border-indigo-600 bg-indigo-50/60 ring-2 ring-indigo-400 shadow-sm'
-                          : 'border-slate-200 hover:border-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black px-1.5 py-0.5 rounded-md bg-slate-900 text-white">
-                          {st.seatNumber} 號
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {st.studentId}
-                        </span>
-                      </div>
-                      <div className="mt-1.5 flex items-baseline justify-between">
-                        <span className="text-sm font-black text-slate-800 group-hover:text-slate-900">
-                          {st.name}
-                        </span>
-                        <span className="text-[10px] font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                          點選 &gt;
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+              {/* Official Class 205 Students */}
+              <div>
+                <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1.5">
+                  🎓 205 班正式學生 (01 ~ 31 號)
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {filteredStudents.filter(s => !s.isTest).map((st) => {
+                    const isCurrent = selectedSeat === st.seatNumber;
+                    return (
+                      <button
+                        key={st.seatNumber}
+                        type="button"
+                        onClick={() => handleSelectSeat(st)}
+                        className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col justify-between group ${
+                          isCurrent
+                            ? 'border-indigo-600 bg-indigo-50/60 ring-2 ring-indigo-400 shadow-sm'
+                            : 'border-slate-200 hover:border-slate-900 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black px-1.5 py-0.5 rounded-md bg-slate-900 text-white">
+                            {st.seatNumber} 號
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {st.studentId}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 flex items-baseline justify-between">
+                          <span className="text-sm font-black text-slate-800 group-hover:text-slate-900">
+                            {st.name}
+                          </span>
+                          <span className="text-[10px] font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                            點選 &gt;
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Test and Teacher accounts */}
+              <div>
+                <span className="text-[11px] font-black text-indigo-500 uppercase tracking-wider block mb-1.5">
+                  🛠️ 教師與人員測試專用座號 (32 ~ 35 號)
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {filteredStudents.filter(s => s.isTest).map((st) => {
+                    const isCurrent = selectedSeat === st.seatNumber;
+                    return (
+                      <button
+                        key={st.seatNumber}
+                        type="button"
+                        onClick={() => handleSelectSeat(st)}
+                        className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col justify-between group ${
+                          isCurrent
+                            ? 'border-indigo-600 bg-indigo-50 ring-2 ring-indigo-400 shadow-sm'
+                            : 'border-indigo-200/80 bg-indigo-50/30 hover:border-indigo-600 hover:bg-indigo-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black px-1.5 py-0.5 rounded-md bg-indigo-600 text-white">
+                            {st.seatNumber} 號
+                          </span>
+                          <span className="text-[10px] text-indigo-500 font-bold">
+                            測試專用
+                          </span>
+                        </div>
+                        <div className="mt-1.5 flex items-baseline justify-between">
+                          <span className="text-xs font-black text-slate-900">
+                            {st.name}
+                          </span>
+                          <span className="text-[10px] font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                            測試 &gt;
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 

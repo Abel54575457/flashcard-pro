@@ -12,7 +12,7 @@ import {
 import { mergeCustomWords, unbindLocalProfile } from '../services/storage';
 import { soundSynth } from '../services/soundEffects';
 import { exportWordsToCSV, downloadCSVFile, parseCSVToWords } from '../utils/csvHelper';
-import { CLASS_205_STUDENTS, getStudentBySeat } from '../data/students';
+import { CLASS_205_STUDENTS, TEST_ACCOUNTS, ALL_ROSTER, getStudentBySeat } from '../data/students';
 import {
   getSavedLiffId,
   saveLiffId,
@@ -359,8 +359,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       }
     }
 
-    // 依據 205 班官方名冊 01~31 號逐一構建清單
-    const rosterList: UserProfile[] = CLASS_205_STUDENTS.map((st) => {
+    // 依據 205 班官方名冊 (01~31) 與 測試座號 (32~35) 完整構建清單
+    const rosterList: UserProfile[] = ALL_ROSTER.map((st) => {
       const existing = remoteMap.get(st.seatNumber);
       if (existing) {
         return {
@@ -384,9 +384,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       };
     });
 
-    // 若有超出 31 號的額外帳號（例如先前產生的測試座號），也保留供老師查閱
+    // 若有超出 35 號的額外帳號，也保留供老師查閱
     remoteMap.forEach((st, seat) => {
-      if (!CLASS_205_STUDENTS.some((c) => c.seatNumber === seat)) {
+      if (!ALL_ROSTER.some((c) => c.seatNumber === seat)) {
         rosterList.push(st);
       }
     });
