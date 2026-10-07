@@ -64,7 +64,7 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
           <div className="md:col-span-2 space-y-3">
             
             {/* Class & Seat Header */}
-            <div className="flex items-center space-x-2 text-stone-400 text-xs font-semibold tracking-wider uppercase">
+            <div className="flex items-center space-x-2 text-stone-400 text-xs font-semibold tracking-wider">
               <span>觀光餐旅 205 班</span>
               <span>‧</span>
               <button
@@ -72,11 +72,11 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                   soundSynth.playFlip();
                   onOpenLogin();
                 }}
-                className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-amber-400/20 text-amber-300 hover:bg-amber-400/30 transition-all font-bold"
-                title="點擊切換座號"
+                className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-amber-400/20 text-amber-300 hover:bg-amber-400/30 transition-all font-black text-xs border border-amber-400/30"
+                title="點擊切換座號與核對身分"
               >
-                <span>座號 {userProfile.seatNumber}</span>
-                <span className="text-[10px] opacity-75">切換</span>
+                <span>{userProfile.seatNumber} 號 {userProfile.studentName || ''}</span>
+                <span className="text-[10px] bg-amber-400/30 px-1 py-0.2 rounded text-amber-200">切換</span>
               </button>
             </div>
 

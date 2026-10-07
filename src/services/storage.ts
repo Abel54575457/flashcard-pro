@@ -1,6 +1,7 @@
 import { UserProfile, WordItem, WordStat, ThemeColor } from '../types';
 import { INITIAL_WORDS } from '../data/grade2Words';
 import { syncUserToFirestore, fetchUserFromFirestore } from './firebase';
+import { getStudentBySeat } from '../data/students';
 
 const USER_PROFILE_KEY = 'flashcard_pro_user_profile';
 const LAST_SEAT_KEY = 'flashcard_pro_last_seat';
@@ -9,8 +10,11 @@ const CUSTOM_WORDS_KEY = 'flashcard_pro_custom_words';
 const getSeatKey = (seat: string) => `flashcard_pro_user_profile_${seat}`;
 
 export function createDefaultProfile(seatNumber: string = '01', classCode: string = '205'): UserProfile {
+  const studentInfo = getStudentBySeat(seatNumber);
   return {
     seatNumber,
+    studentName: studentInfo?.name || `座號 ${seatNumber}`,
+    studentId: studentInfo?.studentId || '',
     classCode,
     themeColor: 'emerald',
     unlockedLevel: 1,
@@ -138,10 +142,14 @@ export function mergeUserProfiles(local: UserProfile, remote: UserProfile): User
     ? (new Date(local.lastActive) > new Date(remote.lastActive) ? local.lastActive : remote.lastActive)
     : (local.lastActive || remote.lastActive || new Date().toISOString());
 
+  const studentInfo = getStudentBySeat(local.seatNumber || remote.seatNumber);
+
   return {
     ...local,
     ...remote,
     seatNumber: local.seatNumber || remote.seatNumber,
+    studentName: local.studentName || remote.studentName || studentInfo?.name,
+    studentId: local.studentId || remote.studentId || studentInfo?.studentId,
     classCode: local.classCode || remote.classCode || '205',
     themeColor: local.themeColor || remote.themeColor || 'emerald',
     unlockedLevel,
@@ -154,6 +162,18 @@ export function mergeUserProfiles(local: UserProfile, remote: UserProfile): User
     lineDisplayName: local.lineDisplayName || remote.lineDisplayName,
     linePictureUrl: local.linePictureUrl || remote.linePictureUrl,
   };
+}
+
+export function unbindLocalProfile(seatNumber: string): UserProfile {
+  const current = getLocalProfileForSeat(seatNumber) || createDefaultProfile(seatNumber);
+  const updated: UserProfile = {
+    ...current,
+    lineDisplayName: undefined,
+    lineUserId: undefined,
+    linePictureUrl: undefined,
+  };
+  saveLocalProfile(updated);
+  return updated;
 }
 
 export async function loadUserProfile(seatNumber: string): Promise<UserProfile> {

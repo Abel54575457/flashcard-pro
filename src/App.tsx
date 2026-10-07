@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, WordItem, StudyMode, ThemeColor, WordStat } from './types';
+import type { UserProfile, WordItem, StudyMode, ThemeColor, WordStat } from './types';
 import { loadUserProfile, loadUserProfileSync, saveLocalProfile, getLocalProfile, getLocalProfileForSeat, getCustomWords, saveCustomWords, resetCustomWordsToDefault, mergeUserProfiles, createDefaultProfile } from './services/storage';
 import { isWordDueForReview, updateWordStatOnResult, calculateMasteryRate } from './services/spacedRepetition';
 import { initFirebase, fetchUserFromFirestore } from './services/firebase';
@@ -20,6 +20,8 @@ import { PwaInstallModal } from './components/PwaInstallModal';
 
 import { initAudioUnlock } from './services/tts';
 import { initLiff, getLiffUserProfile } from './services/liff';
+import type { LiffUserProfile } from './services/liff';
+import { CLASS_205_STUDENTS, getStudentBySeat } from './data/students';
 
 export function App() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -92,19 +94,37 @@ export function App() {
       }
     }).catch(() => {});
 
-    // 初始化 LINE LIFF，若於 LINE 聊天室開啟則自動辨識頭像與暱稱
+    // 初始化 LINE LIFF，若於 LINE 聊天室開啟則辨識頭像與暱稱 (增加名冊防呆核對)
     getLiffUserProfile().then((liffUser) => {
       if (liffUser) {
         setUserProfile((curr) => {
           if (!curr) return curr;
-          const updated = {
-            ...curr,
-            lineDisplayName: liffUser.displayName,
-            linePictureUrl: liffUser.pictureUrl,
-            lineUserId: liffUser.userId,
-          };
-          saveLocalProfile(updated);
-          return updated;
+          const currentStudent = getStudentBySeat(curr.seatNumber);
+          const cleanNick = (liffUser.displayName || '').replace(/\s+/g, '');
+          
+          // 防呆檢查：若 LINE 暱稱包含名冊中其他同學的名字（例如目前停留在 31 洪妤恩，但 LINE 是陳月茹），絕對不可自動覆蓋綁定！
+          const mismatch = CLASS_205_STUDENTS.some(
+            (st) => st.seatNumber !== curr.seatNumber && cleanNick.includes(st.name)
+          );
+          if (mismatch) {
+            console.warn(`[Anti-Mismatch] LINE nickname "${liffUser.displayName}" matches another student! Skipped auto-binding to seat ${curr.seatNumber}.`);
+            return curr;
+          }
+
+          // 只有當尚未綁定或綁定同一人時才安全更新
+          if (!curr.lineUserId || curr.lineUserId === liffUser.userId) {
+            const updated = {
+              ...curr,
+              studentName: curr.studentName || currentStudent?.name,
+              studentId: curr.studentId || currentStudent?.studentId,
+              lineDisplayName: liffUser.displayName,
+              linePictureUrl: liffUser.pictureUrl,
+              lineUserId: liffUser.userId,
+            };
+            saveLocalProfile(updated);
+            return updated;
+          }
+          return curr;
         });
       }
     }).catch(() => {});
@@ -126,19 +146,44 @@ export function App() {
     ? words.filter((w) => isWordDueForReview((userProfile.wordStats || {})[w.id])).length
     : 0;
 
-  // 學生切換座號登入 (零延遲同步更新)
-  const handleStudentLogin = (seatNumber: string, classCode: string, themeColor: ThemeColor) => {
+  // 學生切換座號登入 (零延遲同步更新，並核對官方名冊)
+  const handleStudentLogin = (
+    seatNumber: string,
+    classCode: string,
+    themeColor: ThemeColor,
+    liffUser?: LiffUserProfile | null
+  ) => {
+    const studentInfo = getStudentBySeat(seatNumber);
     const local = getLocalProfileForSeat(seatNumber);
     const initialBase = local || createDefaultProfile(seatNumber, classCode);
+
+    // 確定 LINE 綁定資訊
+    // 若學生在確認視窗中明確同意登入，且傳入 liffUser，安全綁定其 LINE 帳號
+    let lineDisplayName = initialBase.lineDisplayName;
+    let lineUserId = initialBase.lineUserId;
+    let linePictureUrl = initialBase.linePictureUrl;
+
+    if (liffUser) {
+      lineDisplayName = liffUser.displayName;
+      lineUserId = liffUser.userId;
+      linePictureUrl = liffUser.pictureUrl;
+    }
+
     const initialProfile: UserProfile = {
       ...initialBase,
       seatNumber,
+      studentName: studentInfo?.name || initialBase.studentName || `座號 ${seatNumber}`,
+      studentId: studentInfo?.studentId || initialBase.studentId || '',
       classCode,
       themeColor,
+      lineDisplayName,
+      lineUserId,
+      linePictureUrl,
     };
 
     // 1. 立即同步更新 React 狀態與 LocalStorage (0ms 延遲)
     setUserProfile(initialProfile);
+    saveLocalProfile(initialProfile);
 
     // 2. 背景同步 Firebase 雲端資料 (無損合併，確保進度與關卡不被洗掉)
     fetchUserFromFirestore(seatNumber).then((remote) => {
@@ -146,7 +191,16 @@ export function App() {
         setUserProfile((curr) => {
           if (curr && curr.seatNumber === seatNumber) {
             const merged = mergeUserProfiles(curr, remote);
-            const finalProfile = { ...merged, themeColor, classCode };
+            const finalProfile = {
+              ...merged,
+              studentName: studentInfo?.name || merged.studentName,
+              studentId: studentInfo?.studentId || merged.studentId,
+              themeColor,
+              classCode,
+              lineDisplayName: lineDisplayName ?? merged.lineDisplayName,
+              lineUserId: lineUserId ?? merged.lineUserId,
+              linePictureUrl: linePictureUrl ?? merged.linePictureUrl,
+            };
             saveLocalProfile(finalProfile);
             return finalProfile;
           }

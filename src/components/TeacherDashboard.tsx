@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, WordItem, FirebaseConfigInput } from '../types';
+import type { UserProfile, WordItem, FirebaseConfigInput } from '../types';
 import { calculateMasteryRate, isWordDueForReview } from '../services/spacedRepetition';
-import { fetchAllStudentsFromFirestore, saveFirebaseConfig, getSavedFirebaseConfig, initFirebase } from '../services/firebase';
-import { mergeCustomWords } from '../services/storage';
+import {
+  fetchAllStudentsFromFirestore,
+  saveFirebaseConfig,
+  getSavedFirebaseConfig,
+  initFirebase,
+  unbindStudentLineFromFirestore,
+  syncOfficialRosterToFirestore
+} from '../services/firebase';
+import { mergeCustomWords, unbindLocalProfile } from '../services/storage';
 import { soundSynth } from '../services/soundEffects';
 import { exportWordsToCSV, downloadCSVFile, parseCSVToWords } from '../utils/csvHelper';
+import { CLASS_205_STUDENTS, getStudentBySeat } from '../data/students';
 import {
   getSavedLiffId,
   saveLiffId,
@@ -37,7 +45,11 @@ import {
   Search,
   Key,
   FileSpreadsheet,
-  FileCode
+  FileCode,
+  UserX,
+  ShieldAlert,
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react';
 
 interface TeacherDashboardProps {
@@ -332,19 +344,104 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     }
   }, [isAuthenticated]);
 
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
+
   const loadStudentsData = async () => {
     setIsLoading(true);
     const remote = await fetchAllStudentsFromFirestore();
+    const remoteMap = new Map<string, UserProfile>();
     if (remote && remote.length > 0) {
-      // 合併雲端學生與目前登入者（確保當前座號也出現）
-      const map = new Map<string, UserProfile>();
-      if (currentProfile) map.set(currentProfile.seatNumber, currentProfile);
-      remote.forEach((st) => map.set(st.seatNumber, st));
-      setStudents(Array.from(map.values()));
-    } else {
-      setStudents(currentProfile ? [currentProfile] : []);
+      remote.forEach((st) => remoteMap.set(st.seatNumber, st));
     }
+    if (currentProfile) {
+      if (!remoteMap.has(currentProfile.seatNumber)) {
+        remoteMap.set(currentProfile.seatNumber, currentProfile);
+      }
+    }
+
+    // 依據 205 班官方名冊 01~31 號逐一構建清單
+    const rosterList: UserProfile[] = CLASS_205_STUDENTS.map((st) => {
+      const existing = remoteMap.get(st.seatNumber);
+      if (existing) {
+        return {
+          ...existing,
+          studentName: st.name,
+          studentId: st.studentId,
+        };
+      }
+      return {
+        seatNumber: st.seatNumber,
+        studentName: st.name,
+        studentId: st.studentId,
+        classCode: '205',
+        themeColor: 'emerald',
+        unlockedLevel: 1,
+        lastActive: '',
+        streakDays: 1,
+        stars: 0,
+        progress: {},
+        wordStats: {},
+      };
+    });
+
+    // 若有超出 31 號的額外帳號（例如先前產生的測試座號），也保留供老師查閱
+    remoteMap.forEach((st, seat) => {
+      if (!CLASS_205_STUDENTS.some((c) => c.seatNumber === seat)) {
+        rosterList.push(st);
+      }
+    });
+
+    setStudents(rosterList);
     setIsLoading(false);
+  };
+
+  // 解除單一學生 LINE 綁定
+  const handleUnbindLine = async (seatNumber: string, studentName: string) => {
+    if (
+      !confirm(
+        `確定要解除座號 ${seatNumber} 號【${studentName}】的 LINE 帳號綁定嗎？\n\n解除後，該座號將恢復為「未連動 LINE」狀態，學生本人下次登入時可重新綁定自己的 LINE 帳號。\n（學生的背單字紀錄、星星與解鎖關卡完全不會遺失！）`
+      )
+    ) {
+      return;
+    }
+
+    setIsLoading(true);
+    unbindLocalProfile(seatNumber);
+    const ok = await unbindStudentLineFromFirestore(seatNumber);
+    setIsLoading(false);
+
+    if (ok) {
+      soundSynth.playLevelClear();
+      alert(`✅ 成功解除座號 ${seatNumber} 號【${studentName}】的 LINE 綁定！`);
+      await loadStudentsData();
+    } else {
+      soundSynth.playWrong();
+      alert('⚠️ 解除綁定失敗，請確認網路連線或 Firebase 權限。');
+    }
+  };
+
+  // 一鍵同步 205 班官方名冊至雲端
+  const handleSyncOfficialRoster = async () => {
+    if (
+      !confirm(
+        '確定要將 205 班官方名冊 (31位同學姓名與學號) 同步至雲端資料庫嗎？\n\n此操作會為每位學生寫入正確的真實姓名與學號，現有學生的學習星星與過關紀錄將 100% 完整保留。'
+      )
+    ) {
+      return;
+    }
+
+    setIsLoading(true);
+    const res = await syncOfficialRosterToFirestore();
+    setIsLoading(false);
+
+    if (res.success) {
+      soundSynth.playLevelClear();
+      alert(`🎉 成功同步 ${res.count} 位學生的官方名冊至雲端資料庫！`);
+      await loadStudentsData();
+    } else {
+      soundSynth.playWrong();
+      alert('同步失敗，請檢查 Firebase 連線或金鑰設定。');
+    }
   };
 
   const handlePasscodeSubmit = (e: React.FormEvent) => {
@@ -621,40 +718,80 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       {/* Tab 1: Students Leaderboard */}
       {activeTab === 'students' && (
         <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h2 className="text-lg font-black text-slate-900">班級各座號學習排行榜</h2>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-black text-slate-900">205 班學生學習與 LINE 綁定管理</h2>
+              <p className="text-xs text-slate-500">依據官方 31 位名冊即時監控學習進度、防呆核對與解除誤綁帳號</p>
+            </div>
+
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleSyncOfficialRoster}
+                disabled={isLoading}
+                className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-extrabold text-xs shadow-sm flex items-center space-x-1.5 transition-all"
+                title="將 205 班 31 位同學的官方姓名與學號一鍵同步至雲端資料庫"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>📋 同步官方名冊 (31位)</span>
+              </button>
+
               <button
                 onClick={handleOpenBatchReminderModal}
                 disabled={isSendingReminders}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-xs shadow-sm flex items-center space-x-1.5 transition-all"
+                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-xs shadow-sm flex items-center space-x-1.5 transition-all"
                 title="預覽並自訂內容後，精準 1 對 1 私訊推播給已綁定座號的學生個人！"
               >
-                <span>🔒 1對1 私訊推播 (僅已綁定學生)</span>
+                <span>🔒 1對1 私訊推播</span>
               </button>
+
               <button
                 onClick={handleOpenClassGroupReminderModal}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-sm flex items-center space-x-1.5 transition-all"
+                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-sm flex items-center space-x-1.5 transition-all"
                 title="預覽並自訂內容後，分享提醒大公告到 205 班級 LINE 群組"
               >
                 <span>📢 分享公告到 205 班群</span>
               </button>
+
               <button
                 onClick={loadStudentsData}
-                className="text-xs font-bold text-indigo-600 hover:underline px-2 py-1"
+                disabled={isLoading}
+                className="text-xs font-bold text-indigo-600 hover:underline px-2.5 py-1.5 rounded-xl border border-indigo-200 hover:bg-indigo-50 flex items-center space-x-1"
               >
-                🔄 重新整理
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                <span>重新整理</span>
               </button>
+            </div>
+          </div>
+
+          {/* Search bar & Notice */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              <input
+                type="text"
+                value={studentSearchTerm}
+                onChange={(e) => setStudentSearchTerm(e.target.value)}
+                placeholder="搜尋座號、姓名或學號..."
+                className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-slate-900"
+              />
+            </div>
+
+            <div className="flex items-center space-x-3 text-xs text-slate-500 font-semibold">
+              <span>全班名額：<strong>{CLASS_205_STUDENTS.length} 人</strong></span>
+              <span>•</span>
+              <span className="text-emerald-700">已綁定 LINE：<strong>{students.filter(s => !!s.lineUserId).length} 人</strong></span>
+              <span>•</span>
+              <span className="text-slate-500">未連動：<strong>{students.filter(s => !s.lineUserId).length} 人</strong></span>
             </div>
           </div>
 
           <div className="p-3 bg-indigo-50/60 rounded-2xl border border-indigo-100 text-[11px] text-indigo-900 space-y-1">
             <p className="font-extrabold flex items-center space-x-1">
-              <span>💡 教師推播提醒差異說明：</span>
+              <span>💡 防呆核對與解除綁定說明：</span>
             </p>
             <ul className="list-disc list-inside space-y-0.5 text-indigo-800">
-              <li><strong>🔒 1對1 私訊推播</strong>：精準私訊至有綁定 LINE 帳號的學生個人聊天室。<strong>班群裡的其他老師、家長完全不會收到！</strong></li>
-              <li><strong>📢 分享公告到 205 班群</strong>：發送全班性大公告至 205 班級群組。</li>
+              <li>若有學生登入選錯座號（如陳月茹誤選 31 號洪妤恩），系統會以黃/紅標籤醒目標示。</li>
+              <li>點擊右側<strong>「🔓 解除綁定」</strong>可一鍵清空該座號的 LINE 綁定，讓真正的學生重新綁定，<strong>學生的星星與單字成績絕不會遺失</strong>！</li>
             </ul>
           </div>
 
@@ -668,72 +805,143 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-xs font-black text-slate-500 uppercase">
-                  <th className="py-3 px-4">座號</th>
-                  <th className="py-3 px-4">學生姓名 / LINE 帳號</th>
-                  <th className="py-3 px-4">班級</th>
-                  <th className="py-3 px-4">主題色</th>
-                  <th className="py-3 px-4">解鎖關卡</th>
-                  <th className="py-3 px-4">獲得星星</th>
-                  <th className="py-3 px-4">熟練單字數</th>
-                  <th className="py-3 px-4">最後活躍時間</th>
-                  <th className="py-3 px-4 text-center">1對1私訊</th>
+                  <th className="py-3 px-3">座號</th>
+                  <th className="py-3 px-3">學生姓名</th>
+                  <th className="py-3 px-3">學號</th>
+                  <th className="py-3 px-3">LINE 連動帳號</th>
+                  <th className="py-3 px-3">解鎖關卡</th>
+                  <th className="py-3 px-3">獲得星星</th>
+                  <th className="py-3 px-3">熟練單字數</th>
+                  <th className="py-3 px-3">最後活躍時間</th>
+                  <th className="py-3 px-3 text-center">管理操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {students.map((st) => {
-                  const allIds = words.map((w) => w.id);
-                  const rate = calculateMasteryRate(allIds, st.wordStats || {});
-                  const masteredCount = Math.round(rate * words.length);
-                  const dueCount = words.filter((w) => isWordDueForReview((st.wordStats || {})[w.id])).length;
+                {(() => {
+                  // 統計 LINE ID 重複次數
+                  const lineIdMap = new Map<string, number>();
+                  students.forEach((s) => {
+                    if (s.lineUserId) {
+                      lineIdMap.set(s.lineUserId, (lineIdMap.get(s.lineUserId) || 0) + 1);
+                    }
+                  });
 
-                  return (
-                    <tr key={st.seatNumber} className="hover:bg-slate-50 font-semibold">
-                      <td className="py-3 px-4 font-black text-indigo-600">座號 {st.seatNumber}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center space-x-2">
-                          {st.linePictureUrl ? (
-                            <img
-                              src={st.linePictureUrl}
-                              alt={st.lineDisplayName || st.seatNumber}
-                              className="w-7 h-7 rounded-full border border-slate-200 object-cover shrink-0"
-                            />
-                          ) : (
-                            <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xs font-bold shrink-0">
-                              {st.seatNumber}
+                  const filteredList = students.filter((st) => {
+                    if (!studentSearchTerm.trim()) return true;
+                    const term = studentSearchTerm.trim().toLowerCase();
+                    const name = (st.studentName || '').toLowerCase();
+                    const lineName = (st.lineDisplayName || '').toLowerCase();
+                    const seat = (st.seatNumber || '').toLowerCase();
+                    const id = (st.studentId || '').toLowerCase();
+                    return name.includes(term) || lineName.includes(term) || seat.includes(term) || id.includes(term);
+                  });
+
+                  return filteredList.map((st) => {
+                    const allIds = words.map((w) => w.id);
+                    const rate = calculateMasteryRate(allIds, st.wordStats || {});
+                    const masteredCount = Math.round(rate * words.length);
+
+                    // 檢查異常綁定警示
+                    let warningText = '';
+                    if (st.lineUserId && (lineIdMap.get(st.lineUserId) || 0) > 1) {
+                      warningText = '⚠️ 重複綁定多座號';
+                    } else if (st.lineDisplayName) {
+                      const cleanNick = st.lineDisplayName.replace(/\s+/g, '');
+                      const otherMatch = CLASS_205_STUDENTS.find(
+                        (c) => c.seatNumber !== st.seatNumber && cleanNick.includes(c.name)
+                      );
+                      if (otherMatch) {
+                        warningText = `⚠️ 暱稱疑為 ${otherMatch.seatNumber}號 ${otherMatch.name}`;
+                      }
+                    }
+
+                    return (
+                      <tr key={st.seatNumber} className="hover:bg-slate-50 font-semibold transition-colors">
+                        <td className="py-3 px-3 font-black text-indigo-600 whitespace-nowrap">
+                          座號 {st.seatNumber}
+                        </td>
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <span className="font-extrabold text-slate-900 text-sm">
+                            {st.studentName || `座號 ${st.seatNumber}`}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-xs text-slate-400 font-mono whitespace-nowrap">
+                          {st.studentId || '-'}
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex flex-col space-y-1">
+                            <div className="flex items-center space-x-2">
+                              {st.linePictureUrl ? (
+                                <img
+                                  src={st.linePictureUrl}
+                                  alt={st.lineDisplayName || st.seatNumber}
+                                  className="w-7 h-7 rounded-full border border-slate-200 object-cover shrink-0"
+                                />
+                              ) : (
+                                <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xs font-bold shrink-0">
+                                  {st.seatNumber}
+                                </div>
+                              )}
+                              {st.lineDisplayName ? (
+                                <div className="flex items-center space-x-1.5">
+                                  <span className="font-extrabold text-slate-900 text-xs">{st.lineDisplayName}</span>
+                                  <span className="px-1.5 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded-md shrink-0">
+                                    LINE 綁定
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-400 font-normal">未連動 LINE</span>
+                              )}
                             </div>
-                          )}
-                          {st.lineDisplayName ? (
-                            <div className="flex items-center space-x-1.5">
-                              <span className="font-extrabold text-slate-900">{st.lineDisplayName}</span>
-                              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded-md">
-                                LINE 綁定
+                            {warningText && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 shrink-0">
+                                {warningText}
                               </span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-400 font-normal">未連動 LINE</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">{st.classCode || '205'}</td>
-                      <td className="py-3 px-4 capitalize">{st.themeColor}</td>
-                      <td className="py-3 px-4 font-bold text-amber-700">Unit {st.unlockedLevel}</td>
-                      <td className="py-3 px-4 text-amber-600 font-bold">⭐ {st.stars || 0}</td>
-                      <td className="py-3 px-4 text-emerald-600 font-bold">{masteredCount} 個 ({Math.round(rate * 100)}%)</td>
-                      <td className="py-3 px-4 text-xs text-slate-400">
-                        {st.lastActive ? new Date(st.lastActive).toLocaleString() : '無記錄'}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <button
-                          onClick={() => handleOpenSingleReminderModal(st)}
-                          className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-all inline-flex items-center space-x-1"
-                          title={`預覽並自訂內容後，一對一私訊座號 ${st.seatNumber}`}
-                        >
-                          <span>💬 私訊提醒</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 font-bold text-amber-700 whitespace-nowrap">
+                          Unit {st.unlockedLevel || 1}
+                        </td>
+                        <td className="py-3 px-3 text-amber-600 font-bold whitespace-nowrap">
+                          ⭐ {st.stars || 0}
+                        </td>
+                        <td className="py-3 px-3 text-emerald-600 font-bold whitespace-nowrap">
+                          {masteredCount} 個 ({Math.round(rate * 100)}%)
+                        </td>
+                        <td className="py-3 px-3 text-xs text-slate-400 whitespace-nowrap">
+                          {st.lastActive ? new Date(st.lastActive).toLocaleString() : '尚未開始'}
+                        </td>
+                        <td className="py-3 px-3 text-center whitespace-nowrap">
+                          <div className="inline-flex items-center space-x-1.5">
+                            {st.lineUserId && (
+                              <button
+                                onClick={() => handleOpenSingleReminderModal(st)}
+                                className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-all inline-flex items-center space-x-1"
+                                title={`預覽並自訂內容後，一對一私訊座號 ${st.seatNumber}`}
+                              >
+                                <span>💬 私訊</span>
+                              </button>
+                            )}
+                            {st.lineUserId && (
+                              <button
+                                onClick={() => handleUnbindLine(st.seatNumber, st.studentName || st.lineDisplayName || `座號 ${st.seatNumber}`)}
+                                className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all inline-flex items-center space-x-1"
+                                title={`解除座號 ${st.seatNumber} 的 LINE 綁定，讓學生重新綁定`}
+                              >
+                                <UserX className="w-3.5 h-3.5" />
+                                <span>解綁</span>
+                              </button>
+                            )}
+                            {!st.lineUserId && (
+                              <span className="text-[11px] text-slate-400 italic">待學生登入</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
               </tbody>
             </table>
           </div>

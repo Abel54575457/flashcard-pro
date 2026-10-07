@@ -2,6 +2,7 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, signInAnonymously, Auth } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, Firestore } from 'firebase/firestore';
 import { FirebaseConfigInput, UserProfile } from '../types';
+import { CLASS_205_STUDENTS, getStudentBySeat } from '../data/students';
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
@@ -119,6 +120,14 @@ export async function syncUserToFirestore(userProfile: UserProfile): Promise<boo
       };
     }
 
+    if (!toSave.studentName) {
+      const studentInfo = getStudentBySeat(toSave.seatNumber);
+      if (studentInfo) {
+        toSave.studentName = studentInfo.name;
+        toSave.studentId = studentInfo.studentId;
+      }
+    }
+
     await setDoc(docRef, toSave, { merge: true });
     return true;
   } catch (err) {
@@ -159,5 +168,94 @@ export async function fetchAllStudentsFromFirestore(): Promise<UserProfile[]> {
   } catch (err) {
     console.warn('Firestore fetch all students failed:', err);
     return [];
+  }
+}
+
+export async function unbindStudentLineFromFirestore(seatNumber: string): Promise<boolean> {
+  await ensureAuth();
+  if (!db) return false;
+  try {
+    const docRef = doc(db, 'users', seatNumber);
+    const snap = await getDoc(docRef);
+    const studentInfo = getStudentBySeat(seatNumber);
+    if (snap.exists()) {
+      const existing = snap.data() as UserProfile;
+      const updated: UserProfile = {
+        ...existing,
+        studentName: studentInfo?.name || existing.studentName || `座號 ${seatNumber}`,
+        studentId: studentInfo?.studentId || existing.studentId || '',
+        lineDisplayName: '',
+        lineUserId: '',
+        linePictureUrl: '',
+      };
+      await setDoc(docRef, updated);
+      return true;
+    } else {
+      const newProfile: UserProfile = {
+        seatNumber,
+        studentName: studentInfo?.name || `座號 ${seatNumber}`,
+        studentId: studentInfo?.studentId || '',
+        classCode: '205',
+        themeColor: 'emerald',
+        unlockedLevel: 1,
+        lastActive: new Date().toISOString(),
+        streakDays: 1,
+        stars: 0,
+        progress: {},
+        wordStats: {},
+        lineDisplayName: '',
+        lineUserId: '',
+        linePictureUrl: '',
+      };
+      await setDoc(docRef, newProfile);
+      return true;
+    }
+  } catch (err) {
+    console.warn('Failed to unbind student LINE in Firestore:', err);
+    return false;
+  }
+}
+
+export async function syncOfficialRosterToFirestore(): Promise<{ success: boolean; count: number }> {
+  await ensureAuth();
+  if (!db) return { success: false, count: 0 };
+  try {
+    let count = 0;
+    for (const st of CLASS_205_STUDENTS) {
+      const docRef = doc(db, 'users', st.seatNumber);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const existing = snap.data();
+        await setDoc(
+          docRef,
+          {
+            ...existing,
+            studentName: st.name,
+            studentId: st.studentId,
+            classCode: '205',
+          },
+          { merge: true }
+        );
+      } else {
+        await setDoc(docRef, {
+          seatNumber: st.seatNumber,
+          studentName: st.name,
+          studentId: st.studentId,
+          classCode: '205',
+          themeColor: 'emerald',
+          unlockedLevel: 1,
+          lastActive: new Date().toISOString(),
+          streakDays: 1,
+          stars: 0,
+          progress: {},
+          wordStats: {},
+        });
+      }
+      count++;
+    }
+    return { success: true, count };
+  } catch (err) {
+    console.warn('Failed to sync official roster to Firestore:', err);
+    return { success: false, count: 0 };
   }
 }

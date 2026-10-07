@@ -163,7 +163,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <User className="w-3.5 h-3.5 text-amber-700" />
               )}
               <span>
-                {userProfile.lineDisplayName ? `${userProfile.lineDisplayName} (${userProfile.seatNumber})` : `座號 ${userProfile.seatNumber}`}
+                {userProfile.studentName
+                  ? `${userProfile.studentName} (${userProfile.seatNumber})`
+                  : userProfile.lineDisplayName
+                  ? `${userProfile.lineDisplayName} (${userProfile.seatNumber})`
+                  : `座號 ${userProfile.seatNumber}`}
               </span>
             </button>
 
